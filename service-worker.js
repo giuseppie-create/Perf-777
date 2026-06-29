@@ -1,4 +1,4 @@
-var CACHE='perf777-v53';
+var CACHE='perf777-v54';
 var ASSETS=['./','./index.html','./manifest.json','./apple-touch-icon.png','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',function(e){
   self.skipWaiting();

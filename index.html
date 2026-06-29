@@ -130,7 +130,7 @@ select:focus{border-color:var(--amber)}
   <div style="display:flex;align-items:center;gap:12px">
     <span id="netDot" title="Network" style="width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block" ></span>
     <span class="sub" id="ts">—</span>
-    <span class="sub" style="color:var(--green)">v53</span>
+    <span class="sub" style="color:var(--green)">v54</span>
   </div>
 </header>
 <div class="tabs">
@@ -182,6 +182,9 @@ select:focus{border-color:var(--amber)}
     <div class="weights" id="weights_w"></div>
     <h2 style="border-top:1px solid var(--line)">Fuels</h2>
     <div class="weights" id="weights_f"></div>
+    <h2 style="border-top:1px solid var(--line)">API key (for OFP / METAR import)</h2>
+    <div style="padding:7px 16px;font-size:10px;color:var(--dim);border-bottom:1px solid var(--line);line-height:1.4">Optional. Needed only for OFP/METAR import when running as installed app. Your key is stored only on this device and never shared. Leave empty when using inside Claude.</div>
+    <div class="inrow"><span class="lab">Anthropic API key</span><input type="password" id="cfg_apikey" placeholder="sk-ant-..." autocomplete="off" style="grid-column:2/4"></div>
   </div>
 
   <!-- RESULTS -->
@@ -715,6 +718,23 @@ let cells = JSON.parse(JSON.stringify(SHEET.takeoff));
 let externals = {'Landing perf!B4': SHEET.landing_B4};
 let engine = makeEngine(cells, externals);
 
+// ===== API helper: works inside Claude (no key) OR standalone with user's own key =====
+function getApiKey(){ try{ return localStorage.getItem('perf777_api_key')||''; }catch(e){ return ''; } }
+function setApiKey(k){ try{ if(k){ localStorage.setItem('perf777_api_key',k); } else { localStorage.removeItem('perf777_api_key'); } }catch(e){} }
+async function callClaude(payload){
+  const key=getApiKey();
+  const headers={'Content-Type':'application/json'};
+  if(key){
+    // standalone (GitHub Pages etc): use the pilot's own API key + browser CORS header
+    headers['x-api-key']=key;
+    headers['anthropic-version']='2023-06-01';
+    headers['anthropic-dangerous-direct-browser-access']='true';
+  }
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{ method:'POST', headers:headers, body:JSON.stringify(payload) });
+  if(!resp.ok){ let msg='HTTP '+resp.status; try{ const e=await resp.json(); if(e&&e.error&&e.error.message) msg=e.error.message; }catch(_){} throw new Error(msg); }
+  return resp.json();
+}
+
 function rawVal(ref){
   const v = cells[ref];
   if (typeof v === 'number') return v;
@@ -792,6 +812,9 @@ function buildInputs(){
   // restore return weight to ATOW
   const rwBtn=document.getElementById('rwAuto');
   if(rwBtn) rwBtn.onclick=e=>{ e.stopPropagation(); returnWeightManual=false; syncReturnWeight(); compute(); };
+  // API key field (stored locally only)
+  const keyEl=document.getElementById('cfg_apikey');
+  if(keyEl){ keyEl.value=getApiKey(); keyEl.oninput=e=>setApiKey(e.target.value.trim()); }
 }
 
 let returnWeightManual = false;  // diventa true se il pilota modifica a mano il return weight
@@ -994,7 +1017,7 @@ function setupMetarImport(){
   if(rwyEl) rwyEl.oninput=()=>recomputeWind();
   if(!btn) return;
   btn.onclick=async ()=>{
-    if(navigator && navigator.onLine===false){ status.style.display='block'; status.style.color='var(--amber)';
+    if(navigator && navigator.onLine===false && !getApiKey()){ status.style.display='block'; status.style.color='var(--amber)';
       status.textContent='⚠ No internet connection. METAR import needs a connection — enter values manually.'; return; }
     const icao=(document.getElementById('cfg_icao').value||'').trim().toUpperCase();
     if(icao.length!==4){ status.style.display='block'; status.style.color='var(--amber)';
@@ -1003,13 +1026,10 @@ function setupMetarImport(){
     status.textContent='Fetching METAR for '+icao+'… (requires connection)';
     try{
       const prompt='Fetch the latest METAR for airport ICAO '+icao+' and return ONLY JSON, no markdown, no extra text. Decode it. Fields: {"oat":<temperature C, integer>, "qnh":<QNH hPa, integer>, "elev":<field elevation ft, integer or null>, "wdir":<wind direction degrees, integer or null if VRB/calm>, "wspd":<wind speed kt, integer>, "raw":"<raw METAR string>"}. If a value is unavailable use null.';
-      const resp=await fetch('https://api.anthropic.com/v1/messages',{
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:1000,
+      const resp_data = await callClaude({ model:'claude-sonnet-4-6', max_tokens:1000,
           messages:[{role:'user',content:prompt}],
-          tools:[{type:'web_search_20250305',name:'web_search'}] })
-      });
-      const data=await resp.json();
+          tools:[{type:'web_search_20250305',name:'web_search'}] });
+      const data=resp_data;
       let txt=(data.content||[]).map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
       // extract first JSON object
       const jm=txt.match(/\{[\s\S]*\}/); if(!jm) throw new Error('no json');
@@ -1052,7 +1072,7 @@ function setupOfpImport(){
   btn.onclick=()=>file.click();
   file.onchange=async ()=>{
     const f=file.files[0]; if(!f) return;
-    if(navigator && navigator.onLine===false){ status.style.display='block'; status.style.color='var(--amber)';
+    if(navigator && navigator.onLine===false && !getApiKey()){ status.style.display='block'; status.style.color='var(--amber)';
       status.textContent='⚠ No internet connection. OFP import needs a connection — enter values manually.'; return; }
     status.style.display='block';
     status.style.color='var(--cyan)';
@@ -1062,15 +1082,11 @@ function setupOfpImport(){
         r.onload=()=>res(r.result.split(',')[1]); r.onerror=()=>rej(new Error('read')); r.readAsDataURL(f); });
       const media=f.type||'image/jpeg';
       const prompt='This is the first page of an OFP (operational flight plan). Extract ONLY the following as JSON, no extra text, no markdown. Weights/fuel in integer kg. DEP_ICAO = departure airport ICAO code (4 letters). RWY = departure/takeoff runway: a number 01-36 optionally followed by L, R or C (e.g. "34", "30R", "16L"). It is shown near the TOP of the OFP, right next to the departure airport ICAO, separated by a slash, in the form ICAO/RWY (for example "OMDB/30R" means runway 30R, "YMML/34" means runway 34). Take the part AFTER the slash next to the departure ICAO. DEST_ICAO = destination/arrival airport ICAO (4 letters), shown for the arrival airport, usually at the end of the routing. LDG_RWY = landing runway at destination, same ICAO/RWY slash format but next to the destination ICAO. ELW = estimated landing weight at destination in kg if shown. Also aircraft structural max weights if shown (MTOW, MLW, MZFW in kg). Fields: {"EZFW":?, "TRIP":?, "CONT":?, "ALTN":?, "FRSV":?, "EXTRA":?, "ADDITIONAL":?, "TAXI":?, "DEP_ICAO":"????", "RWY":"??", "DEST_ICAO":"????", "LDG_RWY":"??", "ELW":?, "MTOW":?, "MLW":?, "MZFW":?}. If a field is missing use 0 for numbers or "" for text.';
-      const resp=await fetch('https://api.anthropic.com/v1/messages',{
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:1000,
+      const data=await callClaude({ model:'claude-sonnet-4-6', max_tokens:1000,
           messages:[{role:'user',content:[
             {type:'image',source:{type:'base64',media_type:media,data:b64}},
             {type:'text',text:prompt}
-          ]}] })
-      });
-      const data=await resp.json();
+          ]}] });
       let txt=(data.content||[]).map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
       const parsed=JSON.parse(txt);
       // map OFP fields to sheet cells (ESTIMATED column J)
@@ -1598,7 +1614,7 @@ if(typeof showInfo==="function") window.showInfoGlobal=showInfo;
   if('serviceWorker' in navigator){
     try{
       var swCode = [
-        "var CACHE='perf777-v53';",
+        "var CACHE='perf777-v54';",
         "self.addEventListener('install',function(e){ self.skipWaiting(); });",
         "self.addEventListener('activate',function(e){ e.waitUntil(self.clients.claim()); });",
         "self.addEventListener('fetch',function(e){",
@@ -1616,7 +1632,7 @@ if(typeof showInfo==="function") window.showInfoGlobal=showInfo;
       ].join('\\n');
       navigator.serviceWorker.register('service-worker.js').then(function(){
         // cache the current page so offline reloads work
-        if(window.caches){ caches.open('perf777-v53').then(function(c){ c.add(window.location.href).catch(function(){}); }); }
+        if(window.caches){ caches.open('perf777-v54').then(function(c){ c.add(window.location.href).catch(function(){}); }); }
       }).catch(function(){});
     }catch(e){}
   }
