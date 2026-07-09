@@ -173,7 +173,7 @@ select:focus{border-color:var(--amber)}
     </div>
     <span id="netDot" title="Network" style="width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block"></span>
     <span class="sub" id="ts">—</span>
-    <span class="sub" style="color:var(--green)">v65</span>
+    <span class="sub" style="color:var(--green)">v67</span>
   </div>
 </header>
 <div class="tabs">
@@ -257,7 +257,7 @@ select:focus{border-color:var(--amber)}
     <div id="ga200out"></div>
   </div>
 </div>
-<div class="foot">Perf 777 v65 &#183; 300ER + 200LR &#183; uso offline iPad</div>
+<div class="foot">Perf 777 v67 &#183; 300ER + 200LR &#183; uso offline iPad</div>
 </div>
 
 <!-- ===== LANDING MODULE ===== -->
@@ -1963,10 +1963,39 @@ function compute(){
   const fob=v('DF_fob'),frsv=v('DF_frsv'),hpf=v('DF_hpf'),app=v('DF_app'),a1f=v('DF_a1f'),a2f=v('DF_a2f'),h2a1=v('DF_h2a1'),h2a2=v('DF_h2a2');
   const hp=t('DF_hpn')||'HP',dn=t('DF_dn')||'DEST',a1n=t('DF_a1n')||'ALTN1',a2n=t('DF_a2n')||'ALTN2';
   const scnA=fob-(hpf+app+a1f+frsv), scnB=fob-(hpf+app+a2f+frsv), scnC=fob-(h2a1+app+frsv), scnD=fob-(h2a2+app+frsv);
-  function row(scn,extra){ const cls=extra>=0?'green':'red'; return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)"><span style="font-size:12px;font-weight:600;letter-spacing:.06em">'+scn+'</span><span class="v '+cls+'" style="font-size:22px">'+(extra>=0?'+':'')+extra.toFixed(1)+'<span class=u>t</span></span></div>'; }
+  // Holding fuel flow (total, both engines) for converting extra fuel → minutes of holding.
+  // Uses the same QRH holding table as the Holding card, at current landing weight & PA.
+  var totalFF=null;
+  try{
+    var ac=(window.__currentAcType==='200LR'||window.__currentAcType==='777F')?'200LR':'300ER';
+    var H=window.__HOLDING_QRH&&window.__HOLDING_QRH[ac];
+    if(H&&window.__holdLookup){
+      var flap=window.__dfHoldFlap==='f1'?'f1':'up';
+      var alw=parseFloat((document.getElementById('L_alw')||{}).value||'0')||240;
+      var elev=parseFloat((document.getElementById('L_elev')||{}).value||'0')||0;
+      var qnh=parseFloat((document.getElementById('L_qnh')||{}).value||'1013')||1013;
+      var pa=Math.round(elev+(1013-qnh)*27);
+      var g=window.__holdLookup(H[flap],alw,pa);
+      if(g&&g.ff!==null&&!isNaN(g.ff)) totalFF=g.ff*2; // kg/h both engines
+    }
+  }catch(e){}
+  function holdMins(extraT){
+    if(totalFF===null||totalFF<=0||extraT<=0) return null;
+    return Math.round(extraT*1000/totalFF*60); // minutes
+  }
+  function row(scn,extra){
+    const cls=extra>=0?'green':'red';
+    var mins=holdMins(extra);
+    var minsHtml=(mins!==null)
+      ? '<div style="font-size:9px;color:var(--cyan);margin-top:1px">'+mins+' min hold available</div>'
+      : (extra<0?'<div style="font-size:9px;color:var(--red);margin-top:1px">short by '+Math.abs(extra).toFixed(1)+' t</div>':'');
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--line)">'
+      +'<div><div style="font-size:12px;font-weight:600;letter-spacing:.05em">'+scn+'</div>'+minsHtml+'</div>'
+      +'<span class="v '+cls+'" style="font-size:22px">'+(extra>=0?'+':'')+extra.toFixed(1)+'<span class=u>t</span></span></div>';
+  }
   const out=$('DF_ladder');
-  if(out) out.innerHTML='<div style="padding:10px 14px;font-size:9.5px;color:var(--dim);letter-spacing:.12em;border-bottom:1px solid var(--line)">EXTRA FUEL vs FOB '+fob.toFixed(1)+'t</div>'
-    +row(hp+' → '+dn+' → '+a1n,scnA)+row(hp+' → '+dn+' → '+a2n,scnB)+row(hp+' → '+a1n+' DIRECT',scnC)+row(hp+' → '+a2n+' DIRECT',scnD);
+  if(out) out.innerHTML='<div style="padding:9px 14px;font-size:9.5px;color:var(--dim);letter-spacing:.1em;border-bottom:1px solid var(--line)">EXTRA FUEL vs FOB '+fob.toFixed(1)+'t'+(totalFF!==null?' \u00b7 hold FF '+Math.round(totalFF)+' kg/h':' \u00b7 enter Landing wt for hold min')+'</div>'
+    +row(hp+' \u2192 '+dn+' \u2192 '+a1n,scnA)+row(hp+' \u2192 '+dn+' \u2192 '+a2n,scnB)+row(hp+' \u2192 '+a1n+' DIRECT',scnC)+row(hp+' \u2192 '+a2n+' DIRECT',scnD);
   const svg=$('DF_svg');
   if(svg) svg.innerHTML='<svg viewBox="0 0 280 120" style="width:100%;font-family:inherit">'
     +'<line x1="40" y1="60" x2="140" y2="60" stroke="var(--amber)" stroke-width="2"/>'
@@ -2458,27 +2487,52 @@ window.__holdLookup=function(tab,wt,pa){
    PWA SERVICE WORKER
    ============================================================ */
 if('serviceWorker' in navigator){
-  /* --- v63: purge any old cache-first service worker that pins stale HTML --- */
-  /* 1. Delete ALL existing caches immediately (frees the stuck v59b/older copies). */
-  if(window.caches&&caches.keys){ caches.keys().then(function(ks){ ks.forEach(function(k){ caches.delete(k); }); }); }
-  /* 2. Unregister every previously-registered service worker, then install the new one. */
+  /* --- v67: OFFLINE-FIRST with background update ---
+     Requirement: the app MUST open with no internet. Strategy:
+       - On install, pre-cache the current page ('./' and full URL) immediately,
+         so a cached copy always exists even before any fetch.
+       - On fetch: STALE-WHILE-REVALIDATE. Serve the cached copy instantly
+         (works fully offline), and in the background fetch a fresh copy to
+         update the cache for next launch. If nothing cached yet, go to network.
+     This gives guaranteed offline open AND automatic updates when online. */
+  var swSrc=[
+    "const CACHE='perf777-v67';",
+    "const PAGE='"+location.pathname+"';",
+    "self.addEventListener('install',function(e){",
+    "  e.waitUntil(caches.open(CACHE).then(function(c){",
+    "    return c.addAll([PAGE,'./']).catch(function(){ return c.add(PAGE).catch(function(){}); });",
+    "  }).then(function(){return self.skipWaiting();}));",
+    "});",
+    "self.addEventListener('activate',function(e){",
+    "  e.waitUntil(caches.keys().then(function(ks){",
+    "    return Promise.all(ks.filter(function(k){return k!==CACHE;}).map(function(k){return caches.delete(k);}));",
+    "  }).then(function(){return self.clients.claim();}));",
+    "});",
+    "self.addEventListener('fetch',function(e){",
+    "  if(e.request.method!=='GET')return;",
+    "  e.respondWith(",
+    "    caches.match(e.request).then(function(cached){",
+    "      var network=fetch(e.request).then(function(res){",
+    "        if(res&&res.status===200){var c=res.clone();caches.open(CACHE).then(function(cache){cache.put(e.request,c);});}",
+    "        return res;",
+    "      }).catch(function(){return null;});",
+    "      /* offline-first: return cached immediately if present, else wait for network,",
+    "         else fall back to the cached page shell. */",
+    "      return cached || network.then(function(r){ return r || caches.match(PAGE) || caches.match('./'); });",
+    "    })",
+    "  );",
+    "});"
+  ].join('\n');
+  /* Clean up any old caches from earlier versions (cache-first lock-in etc.) */
+  if(window.caches&&caches.keys){ caches.keys().then(function(ks){ ks.forEach(function(k){ if(k!=='perf777-v67') caches.delete(k); }); }); }
   navigator.serviceWorker.getRegistrations().then(function(regs){
     var hadOld=regs.some(function(r){return r&&r.active;});
     Promise.all(regs.map(function(r){return r.unregister();})).then(function(){
-      var swBlob=new Blob([[
-        "const CACHE='perf777-v65';",
-        "self.addEventListener('install',function(e){self.skipWaiting();});",
-        "self.addEventListener('activate',function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.filter(function(k){return k!==CACHE;}).map(function(k){return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});",
-        /* NETWORK-FIRST: always try the network so new deploys show up immediately; */
-        /* fall back to cache only when offline. This prevents stale-HTML lock-in. */
-        "self.addEventListener('fetch',function(e){if(e.request.method!=='GET')return;e.respondWith(fetch(e.request).then(function(res){if(res&&res.status===200){var c=res.clone();caches.open(CACHE).then(function(cache){cache.put(e.request,c);});}return res;}).catch(function(){return caches.match(e.request).then(function(r){return r||caches.match('./');});}));});"
-      ].join('\n')],{type:'application/javascript'});
+      var swBlob=new Blob([swSrc],{type:'application/javascript'});
       navigator.serviceWorker.register(URL.createObjectURL(swBlob)).then(function(){
-        /* If an old SW had been controlling this page, reload ONCE so the fresh */
-        /* network-first worker takes over. Guarded by sessionStorage to avoid loops. */
         if(hadOld){
-          var done=false; try{ done=sessionStorage.getItem('sw_v63_reloaded')==='1'; }catch(e){}
-          if(!done){ try{ sessionStorage.setItem('sw_v63_reloaded','1'); }catch(e){} location.reload(); }
+          var done=false; try{ done=sessionStorage.getItem('sw_v67_reloaded')==='1'; }catch(e){}
+          if(!done){ try{ sessionStorage.setItem('sw_v67_reloaded','1'); }catch(e){} location.reload(); }
         }
       }).catch(function(){});
     });
