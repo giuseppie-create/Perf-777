@@ -57,3 +57,25 @@ self.addEventListener('fetch', function(e) {
     })
   );
 });
+  e.respondWith(
+    caches.match(e.request).then(function(cached) {
+      /* Background network update */
+      var network = fetch(e.request).then(function(res) {
+        if (res && res.status === 200) {
+          var clone = res.clone();
+          caches.open(CACHE).then(function(c) { c.put(e.request, clone); });
+        }
+        return res;
+      }).catch(function() { return null; });
+
+      /* Serve cache immediately (offline-first).
+         If not cached yet, wait for network (first load must be online). */
+      if (cached) return cached;
+      return network.then(function(r) {
+        return r || caches.match(PAGE) || caches.match(PAGE + 'index.html');
+      });
+    }).catch(function() {
+      return caches.match(PAGE) || caches.match(PAGE + 'index.html');
+    })
+  );
+});
