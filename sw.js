@@ -7,7 +7,6 @@
 const CACHE = 'perf777-v80';
 const PAGE  = '/Perf-777/';          /* GitHub Pages base path */
 const URLS  = [PAGE, PAGE + 'index.html'];
-
 self.addEventListener('install', function(e) {
   e.waitUntil(
     caches.open(CACHE).then(function(c) {
@@ -20,7 +19,6 @@ self.addEventListener('install', function(e) {
     }).then(function() { return self.skipWaiting(); })
   );
 });
-
 self.addEventListener('activate', function(e) {
   e.waitUntil(
     caches.keys().then(function(keys) {
@@ -31,10 +29,8 @@ self.addEventListener('activate', function(e) {
     }).then(function() { return self.clients.claim(); })
   );
 });
-
 self.addEventListener('fetch', function(e) {
   if (e.request.method !== 'GET') return;
-
   e.respondWith(
     caches.match(e.request).then(function(cached) {
       /* Background network update */
@@ -45,29 +41,6 @@ self.addEventListener('fetch', function(e) {
         }
         return res;
       }).catch(function() { return null; });
-
-      /* Serve cache immediately (offline-first).
-         If not cached yet, wait for network (first load must be online). */
-      if (cached) return cached;
-      return network.then(function(r) {
-        return r || caches.match(PAGE) || caches.match(PAGE + 'index.html');
-      });
-    }).catch(function() {
-      return caches.match(PAGE) || caches.match(PAGE + 'index.html');
-    })
-  );
-});
-  e.respondWith(
-    caches.match(e.request).then(function(cached) {
-      /* Background network update */
-      var network = fetch(e.request).then(function(res) {
-        if (res && res.status === 200) {
-          var clone = res.clone();
-          caches.open(CACHE).then(function(c) { c.put(e.request, clone); });
-        }
-        return res;
-      }).catch(function() { return null; });
-
       /* Serve cache immediately (offline-first).
          If not cached yet, wait for network (first load must be online). */
       if (cached) return cached;
