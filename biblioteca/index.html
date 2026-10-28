@@ -94,7 +94,7 @@ mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 1px}
 /* reader */
 .reader{display:none}
 body.reading .reader{display:block}
-body.reading .home, body.reading .top, body.reading .notesview, body.reading .addview{display:none}
+body.reading .home, body.reading .top, body.reading .notesview, body.reading .addview, body.reading .readingview{display:none}
 .rbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
 .rbar .wrap{display:flex;align-items:center;gap:4px;padding-block:6px}
 .icon-btn{border:0;background:none;padding:8px 10px;border-radius:10px;color:var(--ink);display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:500}
@@ -148,7 +148,16 @@ textarea:focus,input.f:focus,select.f:focus{outline:none;border-color:var(--acce
 .note .book{font-weight:600;font-size:13px;color:var(--accent);border:0;background:none;padding:0;margin-bottom:4px;text-align:left}
 
 /* other views */
-.notesview,.addview{display:none}
+.notesview,.addview,.readingview{display:none}
+body.v-reading .home{display:none}
+body.v-reading .readingview{display:block}
+body.v-reading .chips,body.v-reading .search{display:none}
+.capture .caprow{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.capture .pgf{flex:1 1 140px;margin-bottom:0}
+.capture .actions{margin-top:0;margin-left:auto}
+.capture textarea{min-height:120px;background:var(--surface)}
+.jnote{cursor:pointer}
+.jnote:active{background:var(--accent-soft)}
 body.v-notes .home,body.v-add .home{display:none}
 body.v-notes .notesview{display:block}
 body.v-add .addview{display:block}
@@ -165,7 +174,7 @@ input.f,select.f{width:100%;border:1px solid var(--line);border-radius:12px;back
 
 /* tab bar */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-.tabs .wrap{display:grid;grid-template-columns:repeat(3,1fr)}
+.tabs .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
 .tabs button{border:0;background:none;display:grid;justify-items:center;gap:2px;padding:8px 0 9px;font-size:11.5px;font-weight:500;color:var(--muted)}
 .tabs button[aria-current="true"]{color:var(--accent)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;scroll-behavior:auto!important}}
@@ -212,6 +221,7 @@ body.annot .content [data-bi]:active{background:var(--accent-soft)}
 <main>
   <section class="home wrap" id="home"></section>
   <section class="notesview wrap" id="notesview"></section>
+  <section class="readingview wrap" id="readingview"></section>
   <section class="addview wrap" id="addview"></section>
   <article class="reader" id="reader"></article>
 </main>
@@ -219,6 +229,7 @@ body.annot .content [data-bi]:active{background:var(--accent-soft)}
 <nav class="tabs" aria-label="Sezioni">
   <div class="wrap">
     <button id="tab-lib" aria-current="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M8 19V7M12 19V4M16.5 19l3-13"/><path d="M3 19.5h18"/></svg>Libreria</button>
+    <button id="tab-reading"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10 5 7 4.5 3 5v13c4-.5 7 0 9 1.5 2-1.5 5-2 9-1.5V5c-4-.5-7 0-9 1.5z"/><path d="M12 6.5v13"/></svg>In lettura</button>
     <button id="tab-notes"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>Le mie note</button>
     <button id="tab-add"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Aggiungi</button>
   </div>
@@ -237,9 +248,9 @@ const fold = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(
 
 // ---------- storage ----------
 const KEY = 'biblioteca.v1';
-let store = {notes:[], books:[], edits:{}, last:null, size:18};
+let store = {notes:[], books:[], edits:{}, reading:[], last:null, size:18};
 try { const raw = localStorage.getItem(KEY); if (raw) store = Object.assign(store, JSON.parse(raw)); } catch(e){}
-store.edits = store.edits || {}; store.books = store.books || []; store.notes = store.notes || [];
+store.reading = store.reading || []; store.edits = store.edits || {}; store.books = store.books || []; store.notes = store.notes || [];
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(store)); } catch(e){ toast('Salvataggio non riuscito: memoria del browser non disponibile'); } }
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
 document.documentElement.style.setProperty('--read-size', store.size + 'px');
@@ -421,6 +432,9 @@ function renderSearch(q){
   res.sort((a,b) => b.score - a.score);
   let h = '<div class="res-head"><span>' + res.length + (res.length === 1 ? ' libro' : ' libri') + '</span><span>' + (cat==='all' ? 'in tutte le categorie' : esc(CATS[cat].n)) + '</span></div>';
   if (!res.length) h += '<p class="empty">Nessun risultato per “' + esc(q) + '”.<br>Prova con una parola sola o senza accenti.</p>';
+  const jres = [];
+  store.reading.forEach(r => r.notes.forEach(n => { if (ts.every(t => fold(r.t + ' ' + n.text).includes(t))) jres.push({r, n}); }));
+  if (jres.length) h += '<div class="res-head"><span>Nei libri in lettura · ' + jres.length + '</span></div>' + jres.slice(0, 30).map(x => '<div class="note jnote" data-journal="' + x.r.id + '"><button class="book">' + esc(x.r.t) + ' ›</button><div class="txt">' + highlight(x.n.text, ts) + '</div><div class="when"><span>' + (x.n.pg ? 'p. ' + esc(x.n.pg) + ' · ' : '') + fmtDate(x.n.ts) + '</span></div></div>').join('');
   h += '<ul class="list">' + res.slice(0, 150).map(r => row(r.b, r.occ ? '<span class="snip">' + snippet(r.b, ts) + '</span>' : '', r.occ ? '<span class="badge">' + r.occ + '×</span>' : '')).join('') + '</ul>';
   $('#home').innerHTML = h;
 }
@@ -668,7 +682,7 @@ function backupCard(edited){
     '<div class="actions" style="justify-content:flex-start"><button class="btn ghost" id="bcopy">Copia backup</button>' + (/claude/.test(location.hostname) ? '' : '<button class="btn ghost" id="bfile">Salva file</button>') + '<button class="btn ghost" id="bshow">Ripristina…</button></div>' +
     '<div id="brestore" hidden><textarea id="bin" placeholder="Incolla qui il testo del backup"></textarea><div class="actions"><label class="btn ghost" for="bpick">Scegli file</label><input type="file" id="bpick" accept=".json,application/json,text/plain" hidden><button class="btn" id="bdo">Ripristina</button></div></div></div>';
 }
-function backupJSON(){ return JSON.stringify({app:'biblioteca', v:2, date:new Date().toISOString(), edits:store.edits, books:store.books.map(b => ({id:b.id,t:b.t,a:b.a,c:b.c,b:b.b}))}); }
+function backupJSON(){ return JSON.stringify({app:'biblioteca', v:2, date:new Date().toISOString(), edits:store.edits, reading:store.reading, books:store.books.map(b => ({id:b.id,t:b.t,a:b.a,c:b.c,b:b.b}))}); }
 function bindBackup(){
   const c = document.getElementById('bcopy'); if (!c) return;
   c.addEventListener('click', () => {
@@ -697,6 +711,7 @@ function bindBackup(){
       Object.keys(d.edits || {}).forEach(id => { store.edits[id] = d.edits[id]; ne++; });
       const ids = new Set(store.books.map(b => b.id));
       (d.books || []).forEach(b => { if (!ids.has(b.id)){ store.books.push(b); nb++; } });
+      const rids = new Set(store.reading.map(r => r.id)); (d.reading || []).forEach(r => { if (!rids.has(r.id)) store.reading.push(r); });
       (d.notes || []).forEach(n => store.notes.push(n));
       save(); migrate(); rebuild(); renderChips(); renderNotesView();
       toast('Ripristinati ' + ne + ' riassunti' + (nb ? ' e ' + nb + ' libri' : ''));
@@ -725,14 +740,132 @@ function renderAddView(){
   });
 }
 
+// ---------- in lettura: reading journal ----------
+let journalId = null;
+const rbook = id => store.reading.find(r => r.id === id);
+function renderReadingView(){
+  if (journalId && rbook(journalId)) return renderJournal(journalId);
+  journalId = null;
+  const opts = Object.keys(CATS).map(k => '<option value="' + k + '">' + esc(CATS[k].n) + '</option>').join('');
+  const list = store.reading.slice().sort((a, b) => (b.upd || b.started) - (a.upd || a.started));
+  let h = '<h2 class="vh">In lettura</h2><p class="lede">I libri che stai leggendo adesso. Prendi appunti mentre leggi; alla fine li mandi a Claude e diventano parte del riassunto.</p>';
+  if (list.length){
+    h += '<ul class="list">' + list.map(r => '<li><button class="row" data-journal="' + r.id + '"><span class="cat-dot" style="--h:' + (HUES[r.c]||200) + '"></span><span class="main"><span class="t">' + esc(r.t) + '</span><span class="a">' + esc(r.a || '—') + ' · iniziato il ' + fmtDate(r.started) + '</span></span><span class="meta">' + (r.done ? '<span class="badge">inviato</span>' : '') + '✍️ ' + r.notes.length + '</span></button></li>').join('') + '</ul>';
+  }
+  h += '<form class="card" id="rform" novalidate><h3>Inizia un nuovo libro</h3><p>Ti servono solo titolo e autore. La categoria si può cambiare dopo.</p>' +
+    '<div class="field"><label for="rt">Titolo</label><input class="f" id="rt" autocomplete="off"></div>' +
+    '<div class="field"><label for="ra">Autore</label><input class="f" id="ra" autocomplete="off"></div>' +
+    '<div class="field"><label for="rc">Categoria</label><select class="f" id="rc">' + opts + '</select></div>' +
+    '<div class="actions"><button class="btn" type="submit">Inizia a leggere</button></div></form>';
+  $('#readingview').innerHTML = h;
+  $('#rform').addEventListener('submit', e => {
+    e.preventDefault();
+    const t = $('#rt').value.trim(); if (!t){ toast('Scrivi almeno il titolo'); return; }
+    const r = {id: 'r' + Date.now().toString(36), t, a: $('#ra').value.trim(), c: $('#rc').value, started: Date.now(), upd: Date.now(), notes: []};
+    store.reading.push(r); save(); journalId = r.id; renderJournal(r.id); renderChips();
+  });
+}
+let editNoteId = null;
+function renderJournal(id){
+  const r = rbook(id); if (!r) return renderReadingView();
+  journalId = id;
+  const notes = r.notes.slice().sort((a, b) => b.ts - a.ts);
+  const opts = Object.keys(CATS).map(k => '<option value="' + k + '"' + (k === r.c ? ' selected' : '') + '>' + esc(CATS[k].n) + '</option>').join('');
+  const lastPg = (r.notes.slice().sort((a, b) => b.ts - a.ts).find(n => n.pg) || {}).pg || '';
+  $('#readingview').innerHTML =
+    '<button class="icon-btn" id="jback" style="margin:10px 0 0 -10px">‹ In lettura</button>' +
+    '<header class="rhead" style="padding-top:6px"><span class="cat" style="--h:' + (HUES[r.c]||200) + '"><span class="cat-dot" style="--h:' + (HUES[r.c]||200) + '"></span>In lettura · ' + esc(CATS[r.c] ? CATS[r.c].n : '') + '</span>' +
+      '<h1>' + esc(r.t) + '</h1><div class="by">' + esc(r.a || '') + '</div>' +
+      '<div class="facts"><span>Iniziato il ' + fmtDate(r.started) + '</span><span>✍️ ' + r.notes.length + (r.notes.length === 1 ? ' nota' : ' note') + '</span>' + (r.done ? '<span class="edited">Inviato a Claude</span>' : '') + '</div></header>' +
+    '<div class="capture card" style="margin-top:4px">' +
+      '<div class="field"><label for="jtext">' + (editNoteId ? 'Modifica nota' : 'Nuova nota') + '</label><textarea id="jtext" placeholder="Un’idea, una frase da ricordare, una domanda, un collegamento con un altro libro…"></textarea></div>' +
+      '<div class="caprow"><div class="field pgf"><label for="jpg">Pagina / capitolo</label><input class="f" id="jpg" inputmode="text" autocomplete="off" value="' + esc(editNoteId ? '' : lastPg) + '" placeholder="es. 112 o cap. 4"></div>' +
+      '<div class="actions">' + (editNoteId ? '<button class="btn ghost" id="jcancel">Annulla</button>' : '') + '<button class="btn" id="jsave">' + (editNoteId ? 'Salva' : 'Salva nota') + '</button></div></div></div>' +
+    (notes.length ? '<div class="res-head"><span>Le tue note, dalla più recente</span><span>tocca per modificare</span></div>' : '<p class="empty" style="padding:28px 8px">Ancora nessuna nota. Scrivi la prima qui sopra.</p>') +
+    notes.map(n => '<div class="note jnote" data-jn="' + n.id + '">' + '<div class="txt">' + esc(n.text) + '</div><div class="when"><span>' + (n.pg ? 'p. ' + esc(n.pg) + ' · ' : '') + fmtDate(n.ts) + '</span></div></div>').join('') +
+    '<div class="card"><h3>Hai finito il libro?</h3><p>Manda a Claude le tue note già impaginate. Claude scrive il riassunto con dentro le tue note e lo aggiunge alla libreria.</p>' +
+      '<div class="actions" style="justify-content:flex-start"><button class="btn" id="jsend">Invia a Claude per il riassunto</button><button class="btn ghost" id="jdraft">Metti in libreria come bozza</button></div></div>' +
+    '<div class="card"><h3>Dettagli del libro</h3>' +
+      '<div class="field"><label for="jt">Titolo</label><input class="f" id="jt" value="' + esc(r.t) + '"></div>' +
+      '<div class="field"><label for="ja">Autore</label><input class="f" id="ja" value="' + esc(r.a || '') + '"></div>' +
+      '<div class="field"><label for="jc">Categoria</label><select class="f" id="jc">' + opts + '</select></div>' +
+      '<div class="actions"><button class="btn danger" id="jdel">Elimina libro e note</button><button class="btn ghost" id="jmeta">Salva dettagli</button></div></div>';
+  if (editNoteId){ const n = r.notes.find(x => x.id === editNoteId); if (n){ $('#jtext').value = n.text; $('#jpg').value = n.pg || ''; } }
+  bindJournal(r);
+}
+function journalText(r){
+  const notes = r.notes.slice().sort((a, b) => a.ts - b.ts);
+  return 'Ciao Claude, ho finito di leggere un libro per My Library. Fai il riassunto nel mio solito formato e integra le mie note (come ✍️), poi aggiungilo alla libreria.\n\n' +
+    'Titolo: ' + r.t + '\nAutore: ' + (r.a || '—') + '\nCategoria: ' + (CATS[r.c] ? CATS[r.c].n : r.c) + '\nLetto dal ' + fmtDate(r.started) + ' al ' + fmtDate(Date.now()) + '\n\n' +
+    'LE MIE NOTE (' + notes.length + '):\n' + notes.map((n, i) => (i + 1) + '. ' + (n.pg ? '[p. ' + n.pg + '] ' : '') + n.text.replace(/\n+/g, ' / ')).join('\n') + '\n';
+}
+function bindJournal(r){
+  const touch = () => { r.upd = Date.now(); save(); };
+  $('#jback').addEventListener('click', () => { journalId = null; editNoteId = null; renderReadingView(); window.scrollTo(0, 0); });
+  $('#jsave').addEventListener('click', () => {
+    const text = $('#jtext').value.trim(); const pg = $('#jpg').value.trim();
+    if (!text){ toast('Scrivi qualcosa prima di salvare'); return; }
+    if (editNoteId){ const n = r.notes.find(x => x.id === editNoteId); if (n){ n.text = text; n.pg = pg; } editNoteId = null; toast('Nota aggiornata'); }
+    else { r.notes.push({id: 'j' + Date.now().toString(36), text, pg, ts: Date.now()}); toast('Nota salvata'); }
+    touch(); renderJournal(r.id); renderChips();
+  });
+  $('#jtext').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('#jsave').click(); });
+  const jc = document.getElementById('jcancel'); if (jc) jc.addEventListener('click', () => { editNoteId = null; renderJournal(r.id); });
+  document.querySelectorAll('[data-jn]').forEach(el => el.addEventListener('click', () => {
+    editNoteId = el.dataset.jn; renderJournal(r.id); window.scrollTo({top: 0}); $('#jtext').focus();
+    // add delete option while editing
+    const act = document.querySelector('.capture .actions');
+    const del = document.createElement('button'); del.className = 'btn danger'; del.textContent = 'Elimina nota';
+    del.addEventListener('click', () => {
+      if (!del.dataset.armed){ del.dataset.armed = '1'; del.textContent = 'Tocca di nuovo per eliminare'; return; }
+      r.notes = r.notes.filter(x => x.id !== editNoteId); editNoteId = null; touch(); renderJournal(r.id); renderChips(); toast('Nota eliminata');
+    });
+    act.insertBefore(del, act.firstChild);
+  }));
+  $('#jsend').addEventListener('click', async () => {
+    if (!r.notes.length){ toast('Non ci sono ancora note da inviare'); return; }
+    const txt = journalText(r);
+    let ok = false;
+    try { if (navigator.share){ await navigator.share({title: r.t, text: txt}); ok = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
+    if (!ok){
+      try { await navigator.clipboard.writeText(txt); ok = true; toast('Copiato: incollalo nella chat con Claude'); } catch(e){}
+    }
+    if (!ok){ const ta = $('#jtext'); ta.value = txt; ta.select(); toast('Seleziona e copia il testo'); return; }
+    r.done = true; touch(); renderJournal(r.id);
+  });
+  $('#jdraft').addEventListener('click', e => {
+    const btn = e.currentTarget;
+    if (!btn.dataset.armed){ btn.dataset.armed = '1'; btn.textContent = 'Tocca di nuovo per confermare'; return; }
+    const blocks = [['h', '🎯 Bozza: le mie note di lettura'], ['p', 'Riassunto da completare. Le note sono in ordine di lettura.'], ['hr', '']];
+    r.notes.slice().sort((a, b) => a.ts - b.ts).forEach(n => blocks.push(['my', n.text, n.pg ? 'p. ' + n.pg : '', n.ts]));
+    const b = {id: 'u' + Date.now().toString(36), t: r.t, a: r.a, c: r.c, b: blocks};
+    store.books.push(b); store.reading = store.reading.filter(x => x.id !== r.id); journalId = null; save(); rebuild(); renderChips();
+    toast('Aggiunto alla libreria come bozza'); go('lib'); openBook(b.id);
+  });
+  $('#jmeta').addEventListener('click', () => {
+    const t = $('#jt').value.trim(); if (!t){ toast('Il titolo non può essere vuoto'); return; }
+    r.t = t; r.a = $('#ja').value.trim(); r.c = $('#jc').value; touch(); renderJournal(r.id); toast('Dettagli salvati');
+  });
+  $('#jdel').addEventListener('click', e => {
+    const btn = e.currentTarget;
+    if (!btn.dataset.armed){ btn.dataset.armed = '1'; btn.textContent = 'Tocca di nuovo: perdi ' + r.notes.length + ' note'; return; }
+    store.reading = store.reading.filter(x => x.id !== r.id); journalId = null; save(); renderReadingView(); renderChips(); toast('Libro eliminato');
+  });
+}
+document.addEventListener('click', e => {
+  const j = e.target.closest('[data-journal]');
+  if (j){ journalId = j.dataset.journal; editNoteId = null; if (view !== 'reading') go('reading'); else renderJournal(journalId); window.scrollTo(0, 0); }
+});
+
 // ---------- tabs / routing ----------
-function setTab(v){ ['lib','notes','add'].forEach(k => document.getElementById('tab-' + k).setAttribute('aria-current', String(k === v))); }
+function setTab(v){ ['lib','reading','notes','add'].forEach(k => document.getElementById('tab-' + k).setAttribute('aria-current', String(k === v))); }
 function go(v){
   view = v; current = null; annot = false; editing = false; removeFind(); hideSel(); closeSheet();
   document.body.className = v === 'lib' ? '' : 'v-' + v;
-  $('#vtitle').textContent = v === 'lib' ? 'My Library' : v === 'notes' ? 'Note' : 'Nuovo libro';
+  $('#vtitle').textContent = v === 'lib' ? 'My Library' : v === 'notes' ? 'Note' : v === 'reading' ? 'In lettura' : 'Nuovo libro';
   setTab(v);
   if (v === 'notes') renderNotesView();
+  if (v === 'reading') renderReadingView();
   if (v === 'add') renderAddView();
   if (v === 'lib'){ renderChips(); renderHome(); }
   window.scrollTo(0, 0);
@@ -741,11 +874,12 @@ function go(v){
 }
 $('#tab-lib').addEventListener('click', () => { if (current) closeBook(); go('lib'); });
 $('#tab-notes').addEventListener('click', () => go('notes'));
+$('#tab-reading').addEventListener('click', () => { journalId = null; editNoteId = null; go('reading'); });
 $('#tab-add').addEventListener('click', () => go('add'));
 function route(){
   const h = location.hash.slice(1);
   if (h && byId(h)){ if (!current || current.id !== h) openBook(h, {resume: true}); }
-  else if (h === 'notes' || h === 'add') go(h);
+  else if (h === 'notes' || h === 'add' || h === 'reading') go(h);
   else if (/^h\d+$/.test(h) && current){ /* in-page jump */ }
   else { if (current) closeBook(); else go('lib'); }
 }
