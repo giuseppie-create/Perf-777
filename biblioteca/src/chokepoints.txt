@@ -1,0 +1,177 @@
+title: Chokepoints
+author: Edward Fishman
+cat: geo
+---
+🎯 Tesi centrale
+
+Le guerre del XXI secolo si combattono sempre più con le banche, non con i carri armati.
+
+Gli Stati Uniti controllano i “colli di bottiglia” (chokepoints) dell’economia globale:
+dollaro, sistema bancario, tecnologia, assicurazioni.
+Chi controlla il passaggio può strozzare l’avversario senza sparare un colpo.
+
+👉 La guerra economica è diventata il modo principale con cui l’America combatte le sue battaglie geopolitiche.
+
+⸻
+
+1️⃣ Che cos’è un chokepoint
+
+👉 Metafora del libro: il Bosforo.
+Da Atene all’Impero Ottomano, chi controlla lo stretto controlla i traffici.
+
+📌 Oggi gli stretti sono invisibili:
+• il dollaro, usato nella maggior parte dei pagamenti internazionali
+• SWIFT, la rete di messaggi tra banche
+• i semiconduttori e il software per progettarli
+• le assicurazioni marittime occidentali
+
+👉 Definizione di guerra economica (Thomas Schelling):
+usare mezzi economici per infliggere danni a un altro Paese, o minacciarli, per fare pressione.
+
+📌 I comandanti non sono generali, ma avvocati, diplomatici ed economisti.
+Le aziende sono i “soldati”: devono obbedire per non perdere l’accesso al mercato americano.
+
+⸻
+
+2️⃣ Perché proprio ora
+
+👉 Dopo Iraq e Afghanistan l’America è stanca di guerre costose.
+Le sanzioni diventano l’alternativa “senza sangue”.
+
+👉 La globalizzazione ha aumentato il potere dei chokepoint:
+più il mondo è interconnesso, più fa male esserne tagliati fuori.
+
+📌 Gli USA impongono circa tre volte più sanzioni di qualsiasi altro Paese.
+
+⸻
+
+3️⃣ Iran: nasce l’arma finanziaria
+
+👉 Tutto parte dopo l’11 settembre: il Tesoro impara a seguire il denaro del terrorismo.
+Nasce una squadra di esperti di sanzioni, guidata da Stuart Levey.
+
+• 2005: il caso Banco Delta Asia (Macao, fondi nordcoreani) mostra la forza della paura: le banche di tutto il mondo scappano da sole
+• Le vecchie sanzioni (legge ILSA del 1996) erano una “tigre senza denti”
+• La nuova arma: sanzioni secondarie → o lavori con l’Iran o con il sistema in dollari
+• 2012: le banche iraniane vengono escluse da SWIFT
+• Colpito il petrolio iraniano e le transazioni delle sue banche
+
+📌 Risultato: 2015, accordo sul nucleare (JCPOA).
+L’Iran accetta limiti al programma in cambio della revoca delle sanzioni.
+
+👉 Lezione nascosta: revocare le sanzioni è difficile quanto imporle.
+Dopo l’accordo, nessuna banca voleva più rischiare di toccare l’Iran.
+
+👉 2018: Trump esce dall’accordo, contro il parere di Francia, Germania e Regno Unito, e le sanzioni tornano.
+
+⸻
+
+4️⃣ Russia 2014: la prima prova contro una grande economia
+
+👉 Dopo l’annessione della Crimea, il modello Iran non si può copiare:
+la Russia è molto più grande e molto più integrata in Europa.
+
+📌 La soluzione: sanzioni “settoriali”, mirate e calibrate
+• limiti all’accesso al credito occidentale per banche ed energia
+• stop alla tecnologia per petrolio artico, offshore profondo e shale
+• l’abbattimento del volo MH17 (luglio 2014) convince l’Europa a seguire gli USA
+
+👉 Fishman era nel team che le ha progettate.
+
+📌 Risultato: danni reali all’economia russa, ma nessun cambio di rotta.
+E Putin impara: accumula riserve, crea un sistema di pagamenti alternativo, si prepara.
+
+⸻
+
+5️⃣ Cina: la guerra della tecnologia
+
+👉 La rivalità si inasprisce dal 2012-2013: Xi al potere, Belt and Road, chiusura ideologica.
+Il rappresentante del commercio Lighthizer: “Eravamo già in guerra.”
+
+• ZTE (2016-2018): punita per aver venduto tecnologia a Iran e Corea del Nord, rischia di morire senza componenti americani
+• Huawei: gli USA spingono gli alleati a escluderla dalle reti 5G
+• Dicembre 2018: arresto in Canada di Meng Wanzhou, direttrice finanziaria di Huawei
+• 2020: regola sul “prodotto diretto estero” → anche i chip fatti all’estero con tecnologia americana non possono andare a Huawei
+• Ottobre 2022: Biden blocca alla Cina i chip più avanzati e le macchine per produrli
+
+📌 Il chokepoint qui sono i semiconduttori:
+la Cina produce tanto, ma dipende da progetti, software e macchinari occidentali.
+
+👉 L’esito dello scontro è ancora aperto.
+
+⸻
+
+6️⃣ Russia 2022: l’arsenale completo
+
+👉 Con l’invasione dell’Ucraina, l’Occidente usa tutto insieme, coordinato con UE, G7 e Giappone.
+Tra i registi c’è Daleep Singh, consigliere economico alla Casa Bianca.
+
+• Congelamento di circa 300 miliardi di dollari di riserve della banca centrale russa
+• Esclusione di grandi banche russe da SWIFT
+• Controlli sulle esportazioni di tecnologia
+• Price cap: navi, assicurazioni e finanza occidentali solo per petrolio russo venduto sotto 60 dollari al barile
+
+📌 Esempio di forza del price cap:
+le compagnie occidentali assicurano oltre il 95% dei carichi di petrolio.
+La Turchia chiede prove extra di assicurazione → ingorgo di petroliere nel Bosforo.
+Poche righe di regolamento muovono l’economia mondiale.
+
+👉 Risultato ambivalente:
+danni enormi, ma la Russia non si ritira.
+L’obiettivo cambia: non più costringere a cambiare comportamento, ma far pagare un prezzo e indebolire.
+
+⸻
+
+7️⃣ Perché le sanzioni funzionano (o no)
+
+👉 Due scopi diversi:
+• deterrenza → serve una minaccia credibile e una via d’uscita se l’avversario cede
+• indebolimento → il danno è l’obiettivo
+
+📌 Fattori decisivi:
+• costi asimmetrici: devi far più male a loro che a te
+• da solo o con gli alleati: da soli si è rapidi ma deboli, insieme lenti ma forti
+• esecuzione: dipende dalle aziende, e l’eccesso di prudenza crea effetti indesiderati
+• chi guadagna dallo status quo: congelare la situazione danneggiava l’Iran, ma poteva convenire alla Russia
+
+👉 Per questo le sanzioni hanno piegato l’Iran ma non la Russia.
+
+⸻
+
+8️⃣ Le sanzioni sono come gli antibiotici
+
+👉 Funzionano, ma se le usi troppo creano resistenza.
+
+📌 Effetti collaterali:
+• gli avversari costruiscono sistemi alternativi al dollaro e a SWIFT
+• le banche centrali comprano oro
+• il mondo rischia di dividersi in blocchi economici rivali
+
+👉 Il pericolo più grande per il dominio del dollaro può venire dall’interno:
+se si indeboliscono lo stato di diritto o l’indipendenza della Federal Reserve,
+il potere americano si erode “senza che la Cina muova un dito”.
+
+⸻
+
+9️⃣ Le proposte di Fishman
+
+• Smettere di reagire caso per caso
+• Fare della guerra economica un pilastro della sicurezza nazionale
+• Creare un consiglio permanente per la guerra economica (Tesoro, Stato, Commercio, intelligence, settore privato)
+• Coordinarsi sempre con gli alleati
+• Formare persone: corsi universitari di guerra economica
+• Spiegare al pubblico perché le sanzioni costano anche a chi le impone
+
+📌 Non esistono soluzioni facili, solo compromessi.
+
+⸻
+
+🔑 Distillato finale — 5 idee che restano
+
+1. Il vero potere americano è finanziario e tecnologico, non solo militare
+2. Un chokepoint funziona solo finché gli altri non hanno alternative
+3. Le sanzioni piegano chi ha bisogno di uscire dall’isolamento (Iran), non chi è disposto a pagare (Russia)
+4. Ogni sanzione insegna all’avversario a difendersi meglio la volta dopo
+5. La guerra economica ridisegna la globalizzazione: meno efficienza, più blocchi
+
+👉 Si legge bene insieme a: The New Map, The Death of Money, Principles for Dealing with the Changing World Order, Crashed.
