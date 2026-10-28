@@ -1,6 +1,6 @@
 {
- "name": "Biblioteca",
- "short_name": "Biblioteca",
+ "name": "My Library",
+ "short_name": "My Library",
  "lang": "it",
  "start_url": "./",
  "scope": "./",

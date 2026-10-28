@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
-<title>Biblioteca di Emanuele</title>
+<title>My Library</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Biblioteca">
+<meta name="apple-mobile-web-app-title" content="My Library">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#F2F3EF">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;0,7..72,700;1,7..72,400&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap">
 <style>
@@ -199,7 +199,7 @@ body.annot .content [data-bi]:active{background:var(--accent-soft)}
 <body>
 <header class="top" id="top">
   <div class="wrap">
-    <div class="brand"><h1 id="vtitle">Biblioteca</h1><small id="count"></small></div>
+    <div class="brand"><h1 id="vtitle">My Library</h1><small id="count"></small></div>
     <div class="search">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="q" type="search" placeholder="Cerca titolo, autore o parola…" autocomplete="off" enterkeyhint="search" aria-label="Cerca">
@@ -682,7 +682,7 @@ function bindBackup(){
     const blob = new Blob([backupJSON()], {type:'application/json'});
     try {
       const file = new File([blob], name, {type:'application/json'});
-      if (navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'Backup Biblioteca'}); return; }
+      if (navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'Backup My Library'}); return; }
     } catch(e){ if (e && e.name === 'AbortError') return; }
     try { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
     catch(e){ toast('Salvataggio file non disponibile: usa “Copia backup”'); }
@@ -730,7 +730,7 @@ function setTab(v){ ['lib','notes','add'].forEach(k => document.getElementById('
 function go(v){
   view = v; current = null; annot = false; editing = false; removeFind(); hideSel(); closeSheet();
   document.body.className = v === 'lib' ? '' : 'v-' + v;
-  $('#vtitle').textContent = v === 'lib' ? 'Biblioteca' : v === 'notes' ? 'Note' : 'Nuovo libro';
+  $('#vtitle').textContent = v === 'lib' ? 'My Library' : v === 'notes' ? 'Note' : 'Nuovo libro';
   setTab(v);
   if (v === 'notes') renderNotesView();
   if (v === 'add') renderAddView();
