@@ -458,6 +458,7 @@ select:focus{border-color:var(--amber)}
       <button id="importOfpPaste" style="background:var(--amber);color:var(--bg)">📋 PASTE OFP</button>
       <button id="importMetar" style="background:var(--cyan);color:var(--bg)">🌦 METAR</button>
       <button id="L_importMetar" style="background:var(--cyan);color:var(--bg);display:none">🌦 METAR</button>
+      <button id="perfSend" type="button" onclick="window.__perfSend&&window.__perfSend()" style="background:var(--green);color:var(--bg)">📤 SEND</button>
     </div>
     <div style="display:flex;align-items:center;gap:4px;background:rgba(255,255,255,0.04);border:1px solid var(--line);border-radius:8px;padding:3px;margin-right:4px">
       <button id="acBtn300" onclick="setAcType('300ER')" style="font-size:10px;letter-spacing:.1em;font-weight:700;padding:9px 13px;border-radius:6px;border:0;cursor:pointer;background:var(--amber);color:var(--bg);text-transform:uppercase;min-height:36px;white-space:nowrap;position:relative;z-index:2;touch-action:manipulation">-300ER</button>
@@ -467,7 +468,7 @@ select:focus{border-color:var(--amber)}
     </div>
     <span id="netDot" title="Network" style="width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block"></span>
     <span class="sub" id="ts">—</span>
-    <span class="sub" style="color:var(--green)">v91</span>
+    <span class="sub" style="color:var(--green)">v92</span>
   </div>
 </header>
 <div class="tabs">
@@ -553,7 +554,7 @@ select:focus{border-color:var(--amber)}
     <div id="ga200out"></div>
   </div>
 </div>
-<div class="foot">Perf 777 v91 &#183; 300ER/ERSF + 200LR + 777F &#183; offline iPad</div>
+<div class="foot">Perf 777 v92 &#183; 300ER/ERSF + 200LR + 777F &#183; offline iPad</div>
 </div>
 
 <!-- ===== LANDING MODULE ===== -->
@@ -4344,5 +4345,135 @@ window.reopenOverlay = reopenOverlay;
 })();
 </script>
 
+
+<script>
+/* v92: SEND — plain-text export of Perf 777 data (for Approach Brief). Read-only: never changes any input. */
+(function(){
+  const VER='v92';
+  const clean=t=>String(t==null?'':t).replace(/\s+/g,' ').trim();
+  const hidden=el=>{ for(let e=el;e&&e!==document.body;e=e.parentElement){ if(e.style&&e.style.display==='none' && !(e.classList&&e.classList.contains('module'))) return true; } return false; };
+  function labText(l){ if(!l) return ''; const c=l.cloneNode(true); c.querySelectorAll('button').forEach(b=>b.remove()); return clean(c.textContent); }
+  // INPUT rows: label + value(s); empty rows skipped
+  function inputs(root){
+    const out=[]; if(!root) return out;
+    root.querySelectorAll('.inrow, .wxcell').forEach(r=>{
+      if(hidden(r)) return;
+      const lab=labText(r.querySelector('.lab, .wxl')); if(!lab||/^ITEM$/i.test(lab)) return;
+      const vals=[];
+      r.querySelectorAll('input, select').forEach(i=>{ if(i.type==='password'||i.type==='file') return; const v=clean(i.value); if(v) vals.push(v); });
+      if(!vals.length){ const sp=Array.from(r.children).find(c=>c.tagName==='SPAN'&&!c.classList.contains('lab')); if(sp){ const v=clean(sp.textContent); if(v&&v!=='—') vals.push(v); } }
+      if(vals.length) out.push(lab+': '+vals.join(' / '));
+    });
+    return out;
+  }
+  // generic text of a block: newline at block elements, ' | ' between table cells
+  function blockText(el){
+    const parts=[];
+    (function walk(n){
+      if(n.nodeType===3){ const t=n.textContent; if(t.trim()) parts.push(t); return; }
+      if(n.nodeType!==1) return;
+      const tg=n.tagName;
+      if(tg==='SCRIPT'||tg==='STYLE'||tg==='svg'||tg==='SVG'||tg==='BUTTON') return;
+      if(tg==='INPUT'){ if(n.type!=='password'&&n.value) parts.push(' '+n.value+' '); return; }
+      if(tg==='SELECT'){ parts.push(' '+n.value+' '); return; }
+      if(n.style&&n.style.display==='none') return;
+      if(n.classList&&n.classList.contains('cell')){ parts.push('\n'+cellText(n)+'\n'); return; }
+      const blk=/^(DIV|P|LI|TR|H1|H2|H3|DETAILS|SUMMARY|TABLE|SECTION)$/.test(tg);
+      if(blk) parts.push('\n');
+      n.childNodes.forEach(c=>{ walk(c); if(c.nodeType===1&&/^(TD|TH)$/.test(c.tagName)) parts.push(' | '); });
+      if(blk) parts.push('\n');
+    })(el);
+    const ls=parts.join('').split('\n').map(l=>clean(l).replace(/(\|\s*)+$/,'').trim()).filter(l=>l&&l!=='|');
+    const m=[]; ls.forEach(l=>{ if(m.length&&/^[-+]?[\d.,]+\s*[a-z%°\/]{0,6}$/i.test(l)) m[m.length-1]+=' '+l; else m.push(l); });
+    return m.join('\n');
+  }
+  // one output cell: "TITLE: value(s)"
+  function cellText(c){
+    const t=c.querySelector('.t'); const title=t?labText(t):'';
+    const rest=c.cloneNode(true); const tt=rest.querySelector('.t'); if(tt) tt.remove();
+    rest.querySelectorAll('select').forEach((s,i)=>{ const src=c.querySelectorAll('select')[i]; const sp=document.createElement('span'); sp.textContent=' '+(src?src.value:'')+' '; s.replaceWith(sp); });
+    rest.querySelectorAll('input').forEach((s,i)=>{ const src=c.querySelectorAll('input')[i]; const sp=document.createElement('span'); sp.textContent=' '+(src?src.value:'')+' '; s.replaceWith(sp); });
+    // sub-columns (label above value) -> "label value"
+    const segs=[]; (function walk(n){ if(n.nodeType===3){ const x=clean(n.textContent); if(x) segs.push(x); return; } if(n.nodeType!==1||n.tagName==='BUTTON') return; n.childNodes.forEach(walk); })(rest);
+    let v=segs.join(' ').replace(/\s+([%°])/g,'$1');
+    return title?(title+': '+(v||'—')):v;
+  }
+  function h2Text(h){ let d=Array.from(h.childNodes).filter(n=>n.nodeType===3).map(n=>n.textContent).join(' '); d=clean(d); if(!d) d=clean(h.textContent); return d.replace(/^[▶▼►▸▾\s]+/,''); }
+  // OUTPUT cards of a module
+  function outputs(root){
+    const out=[]; if(!root) return out;
+    root.querySelectorAll('.card').forEach(card=>{
+      if(hidden(card)) return;
+      if(card.closest('.iotop')) return;                  // inputs handled separately
+      if(card.parentElement&&card.parentElement.closest('.card')) return; // nested
+      if(card.querySelector('.inrow')&&!card.querySelector('.cell')) return; // pure input card
+      const h=card.querySelector('h2'); const title=h?h2Text(h):'';
+      const body=card.cloneNode(false); // build text from children except h2
+      const lines=[];
+      Array.from(card.children).forEach(ch=>{ if(ch.tagName==='H2'){ if(ch!==h) lines.push('-- '+h2Text(ch)+' --'); return; } const t=blockText(ch); if(t) lines.push(t); });
+      const txt=lines.join('\n').trim(); if(!txt) return;
+      out.push('['+(title||'—')+']\n'+txt);
+    });
+    return out;
+  }
+  function section(name,arr){ return arr&&arr.length?('== '+name+' ==\n'+arr.join('\n')+'\n'):''; }
+  function build(){
+    const now=new Date(); const z=now.toISOString().slice(0,16).replace('T',' ')+'Z';
+    const ac=window.__currentAcType||'300ER';
+    const lbl=clean((document.getElementById('acTypeLabel')||{}).textContent)||('777-'+ac);
+    let t='PERF 777 → APPROACH BRIEF\n'+'Perf 777 '+VER+' · '+lbl+' · '+z+'\n\n';
+    const $=id=>document.getElementById(id);
+    t+=section('LANDING — INPUT', inputs($('mod-landing')&&$('mod-landing').querySelector('.iotop')));
+    t+=section('LANDING — OUTPUT', outputs($('mod-landing')));
+    t+=section('DIV FUEL — INPUT', inputs($('mod-divfuel')&&$('mod-divfuel').querySelector('.iotop')));
+    let dfo=outputs($('mod-divfuel'));
+    if(!clean(($('DF_a2n')||{}).value)) dfo=dfo.map(b=>{ const L=b.split('\n'), r=[]; for(let i=0;i<L.length;i++){ if(/ALTN2/.test(L[i])&&/→/.test(L[i])){ while(i+1<L.length&&!/→/.test(L[i+1])&&!/^\[/.test(L[i+1])) i++; continue; } r.push(L[i]); } return r.join('\n'); });
+    t+=section('DIV FUEL — OUTPUT', dfo);
+    const ils=inputs($('mod-ils')); if((parseFloat(($('I_om')||{}).value)||0)>0) t+=section('ILS HOT WX', ils.concat(outputs($('mod-ils'))));
+    const rn=inputs($('mod-rnav')); if(rn.some(l=>/RNAV GP|PAPI/i.test(l))) t+=section('RNAV HOT WX', rn.concat(outputs($('mod-rnav'))));
+    const vb=$('mod-brief'); let vio=outputs(vb).filter(b=>!/^\[Today/.test(b));
+    const chips=vb?Array.from(vb.querySelectorAll('button[data-vi]')).map(b=>clean(b.textContent)).filter(x=>/^✓/.test(x)).map(x=>x.replace(/^✓\s*/,'')):[];
+    vio.unshift('Selected illusions: '+(chips.length?chips.join(' · '):'none'));
+    t+=section('VIS ILLUSION & APP BRIEF', vio);
+    t+=section('FLIGHT PLAN / FUEL (Take Off page, estimated / actual)', inputs($('fields')));
+    const lim=inputs($('mod-takeoff')).filter(l=>/^(MTOW|MLW|MZFW)/.test(l)); t+=section('MAX WEIGHTS', lim);
+    return t.trim()+'\n';
+  }
+  window.__perfBuildSendText=build;
+  function overlay(text){
+    let ov=document.getElementById('perfSendOverlay');
+    if(!ov){
+      ov=document.createElement('div'); ov.id='perfSendOverlay'; ov.className='ovl';
+      ov.innerHTML='<div class="modal" style="max-width:640px;max-height:88vh"><div class="mh"><span>📤 Send to Approach Brief</span><button id="perfSendX">✕</button></div>'
+        +'<div style="padding:10px 16px 0;font-size:10.5px;color:var(--dim);line-height:1.4">Text extract of Landing, Div Fuel, Vis Illusion &amp; App Brief and OFP fuel. Share it or copy and paste it into Approach Brief.</div>'
+        +'<textarea id="perfSendTxt" readonly style="margin:10px 16px 0;height:46vh;background:#091019;color:var(--ink);border:1px solid var(--line);border-radius:7px;font:11px ui-monospace,Menlo,monospace;padding:8px;white-space:pre"></textarea>'
+        +'<div id="perfSendMsg" style="padding:6px 16px 0;font-size:10.5px;color:var(--green);min-height:14px"></div>'
+        +'<div style="display:flex;gap:8px;padding:10px 16px 14px"><button id="perfSendShare" style="flex:1;padding:12px;border:0;border-radius:7px;background:var(--green);color:var(--bg);font-weight:700;letter-spacing:.1em">SHARE</button>'
+        +'<button id="perfSendCopy" style="flex:1;padding:12px;border:1px solid var(--green);border-radius:7px;background:transparent;color:var(--green);font-weight:700;letter-spacing:.1em">COPY</button></div></div>';
+      document.body.appendChild(ov);
+      document.getElementById('perfSendX').onclick=()=>{ ov.style.display='none'; };
+      ov.addEventListener('click',e=>{ if(e.target===ov) ov.style.display='none'; });
+      const msg=m=>{ document.getElementById('perfSendMsg').textContent=m; };
+      document.getElementById('perfSendCopy').onclick=()=>{
+        const ta=document.getElementById('perfSendTxt'); const v=ta.value;
+        const fallback=()=>{ ta.removeAttribute('readonly'); ta.focus(); ta.select(); ta.setSelectionRange(0,v.length); let ok=false; try{ ok=document.execCommand('copy'); }catch(e){} ta.setAttribute('readonly',''); msg(ok?'✓ Copied':'Select the text and copy it manually'); };
+        if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(v).then(()=>msg('✓ Copied'),fallback); else fallback();
+      };
+      document.getElementById('perfSendShare').onclick=()=>{
+        const v=document.getElementById('perfSendTxt').value;
+        if(navigator.share) navigator.share({title:'Perf 777 → Approach Brief',text:v}).then(()=>msg('✓ Shared'),err=>{ if(!err||err.name!=='AbortError') msg('Share not available — use COPY'); });
+        else msg('Share not available here — use COPY');
+      };
+    }
+    document.getElementById('perfSendTxt').value=text;
+    document.getElementById('perfSendMsg').textContent='';
+    ov.style.display='flex';
+  }
+  window.__perfSend=function(){
+    let txt; try{ txt=build(); }catch(e){ txt='PERF 777 → APPROACH BRIEF\nExport error: '+(e&&e.message?e.message:e)+'\n'; }
+    overlay(txt);
+  };
+})();
+</script>
 </body>
 </html>
