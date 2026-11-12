@@ -464,7 +464,7 @@ select:focus{border-color:var(--amber)}
     </div>
     <span id="netDot" title="Network" style="width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block"></span>
     <span class="sub" id="ts">—</span>
-    <span class="sub" style="color:var(--green)">v86</span>
+    <span class="sub" style="color:var(--green)">v87</span>
   </div>
 </header>
 <div class="tabs">
@@ -501,7 +501,7 @@ select:focus{border-color:var(--amber)}
       </select></div>
     <div class="inrow"><span class="lab">VREF X<button class="ibtn" data-info="VREF%20X%20%3D%20VREF%20of%20the%20flap%20you%20will%20use%20%2B%20your%20additive%20%28e.g.%20wind/gust%29.%20Used%20for%20GND%20SPD%20X%20and%20the%20VREF%20X%20autobrake%20/%20brake%20energy%20on%20a%20return%20landing.%20Leave%20as%20is%20if%20not%20needed." data-title="VREF%20X">i</button></span>
       <input type="text" inputmode="decimal" id="cfg_g4" style="grid-column:3/4" step="1"></div>
-    <div class="inrow"><span class="lab">Return ALW t<button class="ibtn" id="rwAuto" title="Reset to takeoff weight" style="border-color:var(--green);color:var(--green)">&#8635;</button></span>
+    <div class="inrow"><span class="lab">Return ALW / MRTOW t<button class="ibtn" id="rwAuto" title="Reset to takeoff weight" style="border-color:var(--green);color:var(--green)">&#8635;</button></span>
       <input type="text" inputmode="decimal" id="cfg_alw" style="grid-column:3/4" step="0.1"></div>
     <div class="inrow"><span class="lab" style="font-size:9.5px;color:var(--dim)">MAX WEIGHTS (from OFP / editable)</span></div>
     <div class="inrow"><span class="lab">MTOW t</span><input type="text" inputmode="decimal" id="lim_mtow" style="grid-column:3/4" step="0.1"></div>
@@ -549,7 +549,7 @@ select:focus{border-color:var(--amber)}
     <div id="ga200out"></div>
   </div>
 </div>
-<div class="foot">Perf 777 v86 &#183; 300ER/ERSF + 200LR + 777F &#183; offline iPad</div>
+<div class="foot">Perf 777 v87 &#183; 300ER/ERSF + 200LR + 777F &#183; offline iPad</div>
 </div>
 
 <!-- ===== LANDING MODULE ===== -->
@@ -2448,7 +2448,7 @@ function compute(){
       // VREF X ground speed (weather-corrected) is Landing cell D6.
       var vrefxGS=null; try{ vrefxGS=lengine.get('D6'); }catch(e){ vrefxGS=null; }
       // VREF X autobrake selection (separate from Flap 30). Stored in window.__lVrefxAb.
-      var vrefxAb=window.__lVrefxAb||AB_OPTIONS[0];
+      var vrefxAb=window.__lVrefxAb||rawVal('F3')||AB_OPTIONS[0];   /* v87: default = same mode as Flap 30, not RTO MAX MAN */
       // Compute VREF X brake energy via the verified takeoff chain.
       // v81: landing weight / taxi mile / brake deactivated from the Landing inputs
       var _lw=lcells['B4'], _tx=lcells['G4'], _bd=lcells['H4'];
@@ -2592,7 +2592,10 @@ function buildInputs(){
   map.forEach(([id,ref])=>{ const el=$(id); if(!el)return; const v=rawVal(ref);
     /* v81: VREF X starts blank so it auto-follows VREF 30 (sheet default 148 was blocking the auto-fill) */
     el.value=(id==='L_vrefx')?'':((typeof v==='number')?v:(v||''));
-    el.onchange=e=>setInput(ref,e.target.value); });
+    el.onchange=e=>setInput(ref,e.target.value);
+    /* v87: VREF X recalculates while typing too (iPad sometimes fires change only on blur) */
+    if(id==='L_vrefx'){ let tm=null; el.oninput=e=>{ clearTimeout(tm); tm=setTimeout(()=>{ const v=el.value.trim(); if(v===''||parseFloat(v)>=100) setInput(ref,v); },500); }; }
+  });
   const rwy=$('L_rwy'); if(rwy) rwy.oninput=()=>recomputeWind();
   const vi=$('L_vrefxInfo'); if(vi) vi.onclick=e=>{ e.stopPropagation(); if(window.showInfoGlobal) window.showInfoGlobal('VREF X','Leave blank: the app uses VREF 30 from the VREF table at the Landing ALW (shown in grey in the field). Type a speed (e.g. VREF + additive, or VREF 25/20 + additive) to get brake energy / BTMS for that speed. Flap 30 block is always computed separately from VREF 30.'); };
 }

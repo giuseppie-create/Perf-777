@@ -6,7 +6,7 @@
    - All network fetches bypass the browser HTTP cache (GitHub Pages caches 10 min),
      so a new release is picked up straight away.
 */
-const CACHE = 'perf777-v86';
+const CACHE = 'perf777-v87';
 const PAGE  = '/Perf-777/';          /* GitHub Pages base path */
 const URLS  = [PAGE, PAGE + 'index.html'];
 const LIBS  = [PAGE + 'pdf.min.js', PAGE + 'pdf.worker.min.js'];
