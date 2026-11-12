@@ -464,7 +464,7 @@ select:focus{border-color:var(--amber)}
     </div>
     <span id="netDot" title="Network" style="width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block"></span>
     <span class="sub" id="ts">—</span>
-    <span class="sub" style="color:var(--green)">v85</span>
+    <span class="sub" style="color:var(--green)">v86</span>
   </div>
 </header>
 <div class="tabs">
@@ -499,7 +499,7 @@ select:focus{border-color:var(--amber)}
       <select id="cfg_pack" style="grid-column:span 2">
         <option>PACK ON</option><option>PACKS OFF</option><option>ENG/WING ON</option><option>ICE COND.</option>
       </select></div>
-    <div class="inrow"><span class="lab">VREF X<button class="ibtn" data-info="VREF%20F%20X%20%2B%20X" data-title="VREF%20X">i</button></span>
+    <div class="inrow"><span class="lab">VREF X<button class="ibtn" data-info="VREF%20X%20%3D%20VREF%20of%20the%20flap%20you%20will%20use%20%2B%20your%20additive%20%28e.g.%20wind/gust%29.%20Used%20for%20GND%20SPD%20X%20and%20the%20VREF%20X%20autobrake%20/%20brake%20energy%20on%20a%20return%20landing.%20Leave%20as%20is%20if%20not%20needed." data-title="VREF%20X">i</button></span>
       <input type="text" inputmode="decimal" id="cfg_g4" style="grid-column:3/4" step="1"></div>
     <div class="inrow"><span class="lab">Return ALW t<button class="ibtn" id="rwAuto" title="Reset to takeoff weight" style="border-color:var(--green);color:var(--green)">&#8635;</button></span>
       <input type="text" inputmode="decimal" id="cfg_alw" style="grid-column:3/4" step="0.1"></div>
@@ -549,7 +549,7 @@ select:focus{border-color:var(--amber)}
     <div id="ga200out"></div>
   </div>
 </div>
-<div class="foot">Perf 777 v85 &#183; 300ER/ERSF + 200LR + 777F &#183; offline iPad</div>
+<div class="foot">Perf 777 v86 &#183; 300ER/ERSF + 200LR + 777F &#183; offline iPad</div>
 </div>
 
 <!-- ===== LANDING MODULE ===== -->
@@ -1618,6 +1618,49 @@ function __parseEkOfp(lines){
   return r;
 }
 
+
+/* v86: generic collapsible cards for a module. defs: [{id|prefix, key, closed}] .
+   Event delegation, so cards whose title is re-rendered keep working. */
+function __mkCollapsible(modId,storeKey,defs){
+  const mod=document.getElementById(modId); if(!mod) return function(){};
+  let st={}; try{ st=JSON.parse(localStorage.getItem(storeKey)||'{}'); }catch(e){}
+  function keyOf(c){
+    const h=c.querySelector(':scope>h2'); if(!h) return null;
+    const txt=(h.textContent||'').replace(/^[▶▼]\s*/,'').trim();
+    const d=defs.find(x=>(x.id&&c.id===x.id)||(x.prefix&&!x.id&&txt.indexOf(x.prefix)===0)); return d||null;
+  }
+  function lab(row){ const l=row.querySelector('.lab'); return l?(l.childNodes[0]&&l.childNodes[0].textContent||l.textContent).trim():''; }
+  function autoSum(c){
+    const ins=Array.from(c.querySelectorAll('.inrow')).map(r=>{ const i=r.querySelector('input,select'); return (i&&i.value)?lab(r).replace(/\s*\(.*?\)\s*/g,' ').replace(/\s+t$/,'').trim()+' '+i.value:''; }).filter(Boolean);
+    if(ins.length) return ins.slice(0,4).join(' · ');
+    if(c.querySelector('.inrow input,.inrow select')) return '— not entered —';
+    const cells=Array.from(c.querySelectorAll('.cell')).slice(0,3).map(x=>{ const t=(x.querySelector('.t')||{}).textContent||''; const v=(x.querySelector('.v')||{}).textContent||''; return (t.trim()+' '+v.trim()).replace(/\s+/g,' '); }).filter(x=>x.trim());
+    if(cells.length) return cells.join(' · ');
+    const kids=Array.from(c.children).slice(1).map(k=>k.textContent).join(' ').replace(/\s+/g,' ').trim();
+    return kids.slice(0,120);
+  }
+  function refresh(){
+    mod.querySelectorAll('.card').forEach(function(c){
+      const d=keyOf(c); if(!d) return;
+      const h=c.querySelector(':scope>h2');
+      if(!c.classList.contains('coll')){ c.classList.add('coll'); if((d.key in st)?st[d.key]:d.closed) c.classList.add('closed'); }
+      c.dataset.ck=d.key;
+      if(!h.querySelector('.carr')) h.insertAdjacentHTML('afterbegin','<span class="carr">▶</span>');
+      let sp=h.querySelector('.csum'); if(!sp){ h.insertAdjacentHTML('beforeend','<span class="csum"></span>'); sp=h.querySelector('.csum'); }
+      if(c.classList.contains('closed')){ try{ sp.textContent=(d.sum?d.sum(c):'')||autoSum(c); }catch(e){ sp.textContent=''; } }
+    });
+  }
+  mod.addEventListener('click',function(e){
+    const h=e.target.closest('.card.coll>h2'); if(!h||e.target.closest('button,select,input')) return;
+    const c=h.parentElement; if(h!==c.querySelector(':scope>h2')) return;
+    c.classList.toggle('closed'); st[c.dataset.ck]=c.classList.contains('closed');
+    try{ localStorage.setItem(storeKey,JSON.stringify(st)); }catch(_){}
+    refresh();
+  });
+  mod.addEventListener('change',function(){ setTimeout(refresh,0); });
+  refresh();
+  return refresh;
+}
 /* ============================================================
    TAKE OFF MODULE
    ============================================================ */
@@ -1780,7 +1823,7 @@ const GRAD_300=[
   {t:'EO G/A F20',ref:'F13',pct:true,dec:1,info:'G/A CLIMB GRADIENT — EO TOGA G/UP F20 2.5%.'},
   {t:'EO GD LCRA F20',ref:'G13',dec:0,unit:'ft/min',info:'EO GEAR DOWN LRCA — 0 ELEV 20° 225T.'},
   {t:'EO GD LCRA F25',ref:'MH150',dec:0,unit:'ft/min',info:'EO GEAR DOWN LRCA — Flaps 25.'},
-  {t:'EO GD LCRA F30',ref:'H13',dec:0,unit:'ft/min',info:'EO GEAR DOWN LRCA — 0 ELEV 20° 225T.'},
+  {t:'EO GD LCRA F30',ref:'H13',dec:0,unit:'ft/min',info:'EO GEAR DOWN LRCA — Flaps 30.'},
 ];
 const WEIGHTS_W=[{t:'ETOW',ref:'J32',scale:0.001,dec:1},{t:'ATOW',ref:'K32',scale:0.001,dec:1},{t:'ELW',ref:'J33',scale:0.001,dec:1},{t:'ALW',ref:'K33',scale:0.001,dec:1},{t:'Ramp weight',ref:'K31',scale:0.001,dec:1}];
 const WEIGHTS_F=[{t:'T/O Fuel',ref:'K27',scale:0.001,dec:1},{t:'Ramp fuel',ref:'K29',scale:0.001,dec:1},{t:'On arrival',ref:'K30',scale:0.001,dec:1},{t:'Fuel Jett',ref:'K34',scale:0.001,dec:1}];
@@ -1877,7 +1920,7 @@ function compute(){
 
   /* Autobrake selects */
   document.querySelectorAll('.ab-sel').forEach(s=>{ s.onchange=e=>setInput(e.target.getAttribute('data-sel'),e.target.value,true); });
-  document.querySelectorAll('.ibtn').forEach(b=>{ b.onclick=e=>{ e.stopPropagation(); showInfo(decodeURIComponent(b.getAttribute('data-title')),decodeURIComponent(b.getAttribute('data-info'))); }; });
+  document.querySelectorAll('.ibtn').forEach(b=>{ if(!b.hasAttribute('data-info')) return; /* v86: keep rwAuto / L_vrefxInfo own handlers */ b.onclick=e=>{ e.stopPropagation(); showInfo(decodeURIComponent(b.getAttribute('data-title')),decodeURIComponent(b.getAttribute('data-info'))); }; });
 
   /* Weight boxes */
   function wRow(t,v,dec){ return '<div class="w"><div class="t">'+t+'</div><div class="v mono">'+(v===null?'—':v.toFixed(dec||0))+'</div></div>'; }
@@ -2512,6 +2555,7 @@ function compute(){
   render200LR_ldgLimits();
   render200LR_gdRoc();
   if(window.__viRender) window.__viRender();   /* v82 */
+  if(window.__landingColl) setTimeout(window.__landingColl,0);   /* v86 summaries */
 
   /* v81: always push airport data to ILS / RNAV so they never go stale
      (before: only when OAT/elev/wind changed; ALW change was not propagated) */
@@ -2604,6 +2648,19 @@ window.__landingSetOnArrival=function(t){
 window.__landingSetAcType=function(type){ window.__currentAcType=type; compute(); };
 
 buildInputs(); compute(); setupMetar();
+/* v86: collapsible Landing cards — inputs closed with summary, results open */
+window.__landingColl=__mkCollapsible('mod-landing','perf777_ldg_cards',[
+  {prefix:'Airport / Weather',key:'wx',closed:true,sum:function(){ const v=id=>(document.getElementById(id)||{}).value||''; return [v('L_icao'),v('L_rwy')].filter(Boolean).join(' ')+' · '+(v('L_oat')||'—')+'°C · Q'+(v('L_qnh')||'—')+' · ELEV '+(v('L_elev')||0)+' · HW '+(v('L_hw')||0)+' / TW '+(v('L_tw')||0); }},
+  {prefix:'Landing data',key:'data',closed:true},
+  {prefix:'Weights',key:'weights',closed:false},
+  {prefix:'Speed',key:'speed',closed:false},
+  {prefix:'Autobrake',key:'ab',closed:false},
+  {prefix:'Brake temp',key:'btms',closed:true},
+  {prefix:'Visual illusions',key:'vi',closed:true,sum:function(c){ const s=c.querySelector('summary'); const n=s?(s.textContent.match(/\((\d+) selected\)/)||[])[1]:'0'; const v=(c.querySelector('.v.green')||{}).textContent||'—'; const pp=Array.from(c.querySelectorAll('.cell')).pop(); const pt=pp?(pp.textContent.match(/(\d WHITE.*?RED|4 WHITE|4 RED)/)||[''])[0]:''; return n+' selected · V/S '+v.replace('fpm',' fpm')+' · PAPI '+pt; }},
+  {id:'gdroc200panel',key:'gdroc',closed:false},
+  {id:'landing200LRout',key:'ldg200',closed:false}
+]);
+
 window.__landingCompute=compute;
 /* v82: approach ground speed for the illusions brief (VREF X GS; 200LR/777F: VREF30 GS) */
 window.__landingAppGS=function(){
@@ -2906,6 +2963,7 @@ function compute(){
 }
 /* Holding panel - QRH PI tables, BOTH variants (speculare) */
 function render200LR_holding(){
+  if(window.__dfCollRefresh) window.__dfCollRefresh();
   const out=$('DF_holdingOut'); if(!out) return;
   const ac=(window.__currentAcType==='200LR'||window.__currentAcType==='777F')?'200LR':'300ER';
   const H=window.__HOLDING_QRH&&window.__HOLDING_QRH[ac];
@@ -3018,6 +3076,18 @@ window.__renderShortTripFuel=renderShortTripFuel;
 renderShortTripFuel();
 
 compute();
+/* v86: collapsible Div Fuel cards */
+window.__dfColl=__mkCollapsible('mod-divfuel','perf777_df_cards',[
+  {prefix:'Fuel state',key:'state',closed:false},
+  {prefix:'Via destination',key:'via',closed:true},
+  {prefix:'Direct from HP',key:'direct',closed:true},
+  {prefix:'Short Trip Fuel — dispatch',key:'stfin',closed:true},
+  {prefix:'Diversion schematic',key:'svg',closed:true,sum:function(){ const v=id=>(document.getElementById(id)||{}).value||''; return (v('DF_hpn')||'HP')+' → '+(v('DF_dn')||'DEST')+' → '+(v('DF_a1n')||'ALTN1')+' / '+(v('DF_a2n')||'ALTN2'); }},
+  {prefix:'Decision ladder',key:'ladder',closed:false,sum:function(c){ return Array.from(c.querySelectorAll('#DF_ladder > div')).slice(1).map(r=>{ const n=(r.querySelector('div>div')||{}).textContent||''; const x=(r.querySelector('span.v')||{}).textContent||''; return n.split('→').pop().trim()+' '+x.replace('t',' t'); }).join(' · '); }},
+  {id:'DF_holdingOut',key:'hold',closed:false},
+  {id:'DF_stfOut',key:'stfout',closed:false}
+]);
+window.__dfCollRefresh=function(){ if(window.__dfColl) setTimeout(window.__dfColl,0); };
 })();
 
 /* ============================================================
