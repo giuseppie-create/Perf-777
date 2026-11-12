@@ -464,7 +464,7 @@ select:focus{border-color:var(--amber)}
     </div>
     <span id="netDot" title="Network" style="width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block"></span>
     <span class="sub" id="ts">—</span>
-    <span class="sub" style="color:var(--green)">v87</span>
+    <span class="sub" style="color:var(--green)">v88</span>
   </div>
 </header>
 <div class="tabs">
@@ -549,7 +549,7 @@ select:focus{border-color:var(--amber)}
     <div id="ga200out"></div>
   </div>
 </div>
-<div class="foot">Perf 777 v87 &#183; 300ER/ERSF + 200LR + 777F &#183; offline iPad</div>
+<div class="foot">Perf 777 v88 &#183; 300ER/ERSF + 200LR + 777F &#183; offline iPad</div>
 </div>
 
 <!-- ===== LANDING MODULE ===== -->
@@ -3409,6 +3409,19 @@ document.addEventListener('DOMContentLoaded',function(){
     });
   });
   if(window.__persistRestore) window.__persistRestore();
+});
+
+/* ============================================================
+   v88: ENTER = confirm & recalculate, on every input of every page.
+   Enter blurs the field: the browser fires 'change' at once (all modules
+   recalculate on change) and the keyboard closes. The keyboard key shows "Done".
+   ============================================================ */
+document.addEventListener('focusin',function(e){ const t=e.target; if(t&&t.tagName==='INPUT'&&!t.hasAttribute('enterkeyhint')) t.setAttribute('enterkeyhint','done'); });
+document.addEventListener('keydown',function(e){
+  const t=e.target;
+  if(e.key!=='Enter'||!t||t.tagName!=='INPUT'||t.type==='checkbox'||t.type==='file') return;
+  e.preventDefault();
+  t.blur();                       /* fires 'change' immediately if the value changed */
 });
 
 /* ============================================================
