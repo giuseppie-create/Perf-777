@@ -2024,23 +2024,40 @@ function setupOfpPdfImport(){
   btn.onclick=()=>file.click();
   file.onchange=async()=>{
     const f=file.files[0]; if(!f)return;
-    ofpSay('var(--cyan)','Reading OFP PDF…');
-    try{
-      const pdfjs=await import('./pdf.min.js');
-      pdfjs.GlobalWorkerOptions.workerSrc='./pdf.worker.min.js';
-      const doc=await pdfjs.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;
-      let lines=[], found=-1;
-      for(let p=1;p<=Math.min(10,doc.numPages);p++){
-        const pg=await doc.getPage(p);
-        lines=lines.concat(__ofpLinesFromTextContent(await pg.getTextContent()));
-        if(found<0) found=lines.some(l=>/^DEST ALTN DIST/.test(l))?p:-1;
-        if(found>0&&p>found) break;           // one extra page in case the table spills over
-      }
-      await importOfpLines(lines,'PDF');
-    }catch(err){ ofpSay('var(--amber)','⚠ OFP PDF import failed: '+(err&&err.message?err.message:'unknown')+'. Try 📋 PASTE or enter manually.'); }
+    await importOfpPdfBlob(f);
     file.value='';
   };
 }
+/* v82: shared by file picker, paste of a copied PDF file, and drag & drop */
+async function importOfpPdfBlob(f){
+  ofpSay('var(--cyan)','Reading OFP PDF…');
+  try{
+    const pdfjs=await import('./pdf.min.js');
+    pdfjs.GlobalWorkerOptions.workerSrc='./pdf.worker.min.js';
+    const doc=await pdfjs.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;
+    let lines=[], found=-1;
+    for(let p=1;p<=Math.min(10,doc.numPages);p++){
+      const pg=await doc.getPage(p);
+      lines=lines.concat(__ofpLinesFromTextContent(await pg.getTextContent()));
+      if(found<0) found=lines.some(l=>/^DEST ALTN DIST/.test(l))?p:-1;
+      if(found>0&&p>found) break;           // one extra page in case the table spills over
+    }
+    await importOfpLines(lines,'PDF');
+  }catch(err){ ofpSay('var(--amber)','⚠ OFP PDF import failed: '+(err&&err.message?err.message:'unknown')+'. Use 📄 OFP PDF (file picker).'); }
+}
+window.__importOfpPdfBlob=importOfpPdfBlob;
+function isPdfFile(f){ return f&&(/pdf/i.test(f.type||'')||/\.pdf$/i.test(f.name||'')); }
+/* Paste anywhere in the app (long-press → Paste, or ⌘V with keyboard): a copied PDF file is imported directly */
+document.addEventListener('paste',function(e){
+  const dt=e.clipboardData; if(!dt) return;
+  let f=null;
+  if(dt.files&&dt.files.length){ for(const x of dt.files){ if(isPdfFile(x)){ f=x; break; } } }
+  if(!f&&dt.items){ for(const it of dt.items){ if(it.kind==='file'){ const x=it.getAsFile(); if(isPdfFile(x)){ f=x; break; } } } }
+  if(f){ e.preventDefault(); const ov=document.getElementById('ofpPasteOverlay'); if(ov) ov.style.display='none'; importOfpPdfBlob(f); }
+});
+/* Drag & drop a PDF from Files (Split View) onto the app */
+document.addEventListener('dragover',function(e){ if(e.dataTransfer&&Array.from(e.dataTransfer.items||[]).some(i=>i.kind==='file')) e.preventDefault(); });
+document.addEventListener('drop',function(e){ const fs=e.dataTransfer&&e.dataTransfer.files; if(fs&&fs.length&&isPdfFile(fs[0])){ e.preventDefault(); importOfpPdfBlob(fs[0]); } });
 /* Paste: OFP text copied from the company app/PDF viewer. Lines are rebuilt
    around the OFP labels, so it works even if the copy lost the line breaks. */
 function ofpTextToLines(txt){
@@ -2056,8 +2073,8 @@ function openPasteBox(){
   let ov=document.getElementById('ofpPasteOverlay');
   if(!ov){
     ov=document.createElement('div'); ov.id='ofpPasteOverlay'; ov.className='ovl';
-    ov.innerHTML='<div class="modal"><div class="mh"><span>Paste OFP text</span><button id="ofpPasteX">✕</button></div>'
-      +'<div style="padding:12px 16px;font-size:11px;color:var(--dim);line-height:1.4">Copy the OFP first page(s) — from the flight number down to the DEST ALTN table — then paste here.</div>'
+    ov.innerHTML='<div class="modal"><div class="mh"><span>Paste OFP (PDF or text)</span><button id="ofpPasteX">✕</button></div>'
+      +'<div style="padding:12px 16px;font-size:11px;color:var(--dim);line-height:1.4">Copy the OFP PDF (in Files: long-press → Copy), then tap in the box below → <b>Paste</b>. A copied PDF imports straight away. Copied text also works.</div>'
       +'<textarea id="ofpPasteTxt" style="margin:0 16px;height:220px;background:#091019;color:var(--ink);border:1px solid var(--line);border-radius:7px;font:11px ui-monospace,Menlo,monospace;padding:8px"></textarea>'
       +'<div style="display:flex;gap:8px;padding:12px 16px"><button id="ofpPasteGo" style="flex:1;padding:12px;border:0;border-radius:7px;background:var(--amber);color:var(--bg);font-weight:700;letter-spacing:.1em">IMPORT</button></div></div>';
     document.body.appendChild(ov);
@@ -2070,10 +2087,19 @@ function openPasteBox(){
   }
   document.getElementById('ofpPasteTxt').value='';
   ov.style.display='flex';
-  // try the clipboard directly (iPad shows a small "Paste" bubble); textarea stays as fallback
-  if(navigator.clipboard&&navigator.clipboard.readText){
+  // try the clipboard directly (iPad shows a small "Paste" bubble): PDF first, then text
+  if(navigator.clipboard&&navigator.clipboard.read){
+    navigator.clipboard.read().then(async items=>{
+      for(const it of items){
+        const t=it.types.find(x=>/pdf/i.test(x));
+        if(t){ const blob=await it.getType(t); ov.style.display='none'; importOfpPdfBlob(blob); return; }
+      }
+      for(const it of items){ if(it.types.includes('text/plain')){ const tx=await (await it.getType('text/plain')).text(); if(tx&&tx.trim()) document.getElementById('ofpPasteTxt').value=tx; return; } }
+    }).catch(()=>{});
+  } else if(navigator.clipboard&&navigator.clipboard.readText){
     navigator.clipboard.readText().then(t=>{ if(t&&t.trim()) document.getElementById('ofpPasteTxt').value=t; }).catch(()=>{});
   }
+  setTimeout(()=>{ const ta=document.getElementById('ofpPasteTxt'); if(ta) ta.focus(); },50);
 }
 window.__openOfpPaste=openPasteBox;
 function setupOfpPaste(){ const b=document.getElementById('importOfpPaste'); if(b) b.onclick=openPasteBox; }
