@@ -456,7 +456,7 @@ select:focus{border-color:var(--amber)}
     </div>
     <span id="netDot" title="Network" style="width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block"></span>
     <span class="sub" id="ts">—</span>
-    <span class="sub" style="color:var(--green)">v82</span>
+    <span class="sub" style="color:var(--green)">v83</span>
   </div>
 </header>
 <div class="tabs">
@@ -541,7 +541,7 @@ select:focus{border-color:var(--amber)}
     <div id="ga200out"></div>
   </div>
 </div>
-<div class="foot">Perf 777 v82 &#183; 300ER/ERSF + 200LR + 777F &#183; offline iPad</div>
+<div class="foot">Perf 777 v83 &#183; 300ER/ERSF + 200LR + 777F &#183; offline iPad</div>
 </div>
 
 <!-- ===== LANDING MODULE ===== -->
@@ -2076,9 +2076,11 @@ function openPasteBox(){
     ov.innerHTML='<div class="modal"><div class="mh"><span>Paste OFP (PDF or text)</span><button id="ofpPasteX">✕</button></div>'
       +'<div style="padding:12px 16px;font-size:11px;color:var(--dim);line-height:1.4">Copy the OFP PDF (in Files: long-press → Copy), then tap in the box below → <b>Paste</b>. A copied PDF imports straight away. Copied text also works.</div>'
       +'<textarea id="ofpPasteTxt" style="margin:0 16px;height:220px;background:#091019;color:var(--ink);border:1px solid var(--line);border-radius:7px;font:11px ui-monospace,Menlo,monospace;padding:8px"></textarea>'
-      +'<div style="display:flex;gap:8px;padding:12px 16px"><button id="ofpPasteGo" style="flex:1;padding:12px;border:0;border-radius:7px;background:var(--amber);color:var(--bg);font-weight:700;letter-spacing:.1em">IMPORT</button></div></div>';
+      +'<div style="display:flex;gap:8px;padding:12px 16px"><button id="ofpPasteGo" style="flex:1;padding:12px;border:0;border-radius:7px;background:var(--amber);color:var(--bg);font-weight:700;letter-spacing:.1em">IMPORT TEXT</button>'
+      +'<button id="ofpPastePick" style="flex:1;padding:12px;border:1px solid var(--amber);border-radius:7px;background:transparent;color:var(--amber);font-weight:700;letter-spacing:.06em">📄 CHOOSE PDF</button></div></div>';
     document.body.appendChild(ov);
     document.getElementById('ofpPasteX').onclick=()=>{ ov.style.display='none'; };
+    document.getElementById('ofpPastePick').onclick=()=>{ ov.style.display='none'; const fi=document.getElementById('ofpPdfFile'); if(fi) fi.click(); };
     document.getElementById('ofpPasteGo').onclick=async()=>{
       const txt=document.getElementById('ofpPasteTxt').value; ov.style.display='none';
       try{ await importOfpLines(ofpTextToLines(txt),'PASTE'); }
@@ -3482,6 +3484,9 @@ if('serviceWorker' in navigator){
   /* Register sw.js (separate file on GitHub Pages).
      This is the ONLY approach that survives browser restart offline.
      blob: URL service workers die when the tab closes — sw.js does not. */
+  /* v83: when a new version's service worker takes over, reload once so the new page shows */
+  var _hadCtrl=!!navigator.serviceWorker.controller, _reloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange',function(){ if(_hadCtrl&&!_reloaded){ _reloaded=true; location.reload(); } });
   navigator.serviceWorker.register('./sw.js').then(function(reg){
     /* Force SW update check on page load so new versions propagate */
     reg.update().catch(function(){});

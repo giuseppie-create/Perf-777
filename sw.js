@@ -4,7 +4,7 @@
    - On fetch: serve cache instantly (works offline), update cache in background
    - On activate: delete old caches so updates propagate on next load
 */
-const CACHE = 'perf777-v82';
+const CACHE = 'perf777-v83';
 const PAGE  = '/Perf-777/';          /* GitHub Pages base path */
 const URLS  = [PAGE, PAGE + 'index.html'];
 /* v82: pdf.js for OFP PDF import — pre-cached so it works offline */
