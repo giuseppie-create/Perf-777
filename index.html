@@ -439,7 +439,7 @@ select:focus{border-color:var(--amber)}
 </head>
 <body>
 <header>
-  <h1>PERF <span style="font-size:11px;color:var(--dim);letter-spacing:.15em;font-weight:400" id="acTypeLabel">777-300ER / 300ERSF</span></h1>
+  <h1>PERF <span style="font-size:11px;color:var(--dim);letter-spacing:.15em;font-weight:400" id="acTypeLabel">777-300ER / GE90-115BL</span></h1>
   <div style="display:flex;align-items:center;gap:12px">
     <div id="hdrTools">
       <button id="importOfp" style="background:var(--amber);color:var(--bg)">📷 OFP</button>
@@ -448,6 +448,7 @@ select:focus{border-color:var(--amber)}
     </div>
     <div style="display:flex;align-items:center;gap:4px;background:rgba(255,255,255,0.04);border:1px solid var(--line);border-radius:8px;padding:3px;margin-right:4px">
       <button id="acBtn300" onclick="setAcType('300ER')" style="font-size:10px;letter-spacing:.1em;font-weight:700;padding:9px 13px;border-radius:6px;border:0;cursor:pointer;background:var(--amber);color:var(--bg);text-transform:uppercase;min-height:36px;white-space:nowrap;position:relative;z-index:2;touch-action:manipulation">-300ER</button>
+      <button id="acBtnSF" onclick="setAcType('300ERSF')" style="font-size:10px;letter-spacing:.1em;font-weight:700;padding:9px 13px;border-radius:6px;border:0;cursor:pointer;background:transparent;color:var(--dim);text-transform:uppercase;min-height:36px;white-space:nowrap;position:relative;z-index:2;touch-action:manipulation">-300ERSF</button>
       <button id="acBtn200" onclick="setAcType('200LR')" style="font-size:10px;letter-spacing:.1em;font-weight:700;padding:9px 13px;border-radius:6px;border:0;cursor:pointer;background:transparent;color:var(--dim);text-transform:uppercase;min-height:36px;white-space:nowrap;position:relative;z-index:2;touch-action:manipulation">-200LR</button>
       <button id="acBtn77F" onclick="setAcType('777F')" style="font-size:10px;letter-spacing:.1em;font-weight:700;padding:9px 13px;border-radius:6px;border:0;cursor:pointer;background:transparent;color:var(--dim);text-transform:uppercase;min-height:36px;white-space:nowrap;position:relative;z-index:2;touch-action:manipulation">-777F</button>
     </div>
@@ -533,11 +534,11 @@ select:focus{border-color:var(--amber)}
   <div class="card cardwide"><h2>Climb gradients (EO)</h2><div class="grid grid5" id="grad"></div></div>
   <!-- 200LR specific Go-Around gradient panel -->
   <div class="card cardwide" id="ga200panel" style="display:none">
-    <h2>200LR &#8212; EO Go-Around Gradient (F20 TOGA, G/UP) &#183; QRH PI-QRH.10.3</h2>
+    <h2>200LR / 777F &#8212; Go-Around, all engines (F20 TOGA, G/UP) &#183; Unreliable Airspeed table PI-QRH.10.3 / 30.3</h2>
     <div id="ga200out"></div>
   </div>
 </div>
-<div class="foot">Perf 777 v81 &#183; 300ER + 200LR &#183; uso offline iPad</div>
+<div class="foot">Perf 777 v81 &#183; 300ER/ERSF + 200LR + 777F &#183; uso offline iPad</div>
 </div>
 
 <!-- ===== LANDING MODULE ===== -->
@@ -924,7 +925,7 @@ const DATA200LR = {
         [158,158,158,158,158,158], // 280
         [164,164,164,164,164,165], // 300
         [173,173,173,173,173,173], // 320
-        [180,180,180,180,180,181], // 340
+        [180,180,180,180,180,180], // 340 (v81: QRH 180 @10000)
         [184,184,184,184,184,184], // 360
       ],
     },
@@ -938,7 +939,7 @@ const DATA200LR = {
         [152,152,152,152,152,152], // 240
         [158,158,158,158,158,158], // 260
         [164,164,164,164,164,164], // 280
-        [170,170,170,170,170,170], // 300
+        [169,170,170,170,170,170], // 300 (v81: QRH 169 @SL)
         [175,175,175,175,175,176], // 320
         [180,180,180,180,181,181], // 340
         [183,183,183,183,183,183], // 360
@@ -956,7 +957,7 @@ const DATA200LR = {
         [173,173,173,173,174,174], // 280
         [179,179,179,179,180,180], // 300
         [185,185,185,185,185,186], // 320
-        [190,190,191,191,191,192], // 340
+        [190,190,190,191,191,192], // 340 (v81: QRH 190 @4000)
         [193,193,193,193,194,195], // 360
       ],
     },
@@ -1177,6 +1178,28 @@ const DATA200LR = {
   },
 };
 
+
+/* ============================================================
+   777F DATA (v81) — QRH PI-QRH.30.6 (VREF) and PI-QRH.32.11-12
+   (Gear Down Landing Rate of Climb Available, F20/F25/F30).
+   Extracted from 777_QRH-UAE-B777-QRH-24 (Oct 2026).
+   777F = 200LR (identical pages) for: Unreliable Airspeed 30.1-30.3,
+   Brake Cooling 31.40, FCOM PI Holding 31.8-9, PD Short Trip 31.6.
+   ============================================================ */
+const DATA777F={
+  vref:{
+    wtRows:[154.221,160,180,200,220,240,260,280,300,320,340,360], // 1000 kg; below 154.220 -> 'below' row
+    f30:{altCols:[0,2000,4000,6000,8000,10000],data:[[137, 134, 130, 126, 121, 116],[137, 134, 130, 126, 121, 117],[137, 134, 130, 126, 124, 124],[137, 134, 131, 131, 131, 131],[137, 137, 138, 138, 138, 138],[143, 144, 144, 144, 144, 144],[149, 149, 149, 150, 150, 150],[158, 158, 158, 158, 158, 158],[164, 164, 164, 164, 164, 165],[173, 173, 173, 173, 173, 173],[180, 180, 180, 180, 180, 180],[186, 186, 186, 186, 187, 187]],below:[143, 140, 137, 134, 132, 128]},
+    f25:{altCols:[0,2000,4000,6000,8000,10000],data:[[137, 134, 130, 126, 124, 124],[137, 134, 130, 126, 124, 124],[137, 134, 131, 131, 131, 132],[139, 139, 139, 139, 139, 139],[145, 145, 146, 146, 146, 146],[152, 152, 152, 152, 152, 152],[158, 158, 158, 158, 158, 158],[164, 164, 164, 164, 164, 164],[169, 170, 170, 170, 170, 170],[175, 175, 175, 175, 175, 176],[180, 180, 180, 180, 181, 181],[185, 185, 185, 185, 185, 185]],below:[143, 140, 137, 134, 132, 128]},
+    f20:{altCols:[0,2000,4000,6000,8000,10000],data:[[137, 134, 130, 128, 128, 129],[137, 134, 131, 131, 131, 131],[139, 139, 139, 139, 139, 139],[147, 147, 147, 147, 147, 147],[154, 154, 154, 154, 154, 154],[160, 160, 161, 161, 161, 161],[167, 167, 167, 167, 167, 167],[173, 173, 173, 173, 174, 174],[179, 179, 179, 179, 180, 180],[185, 185, 185, 185, 185, 186],[190, 190, 190, 191, 191, 192],[195, 195, 195, 196, 196, 198]],below:[143, 140, 137, 134, 132, 129]},
+  },
+  gearDownF20:{tatRows:[52, 50, 48, 46, 44, 42, 40, 38, 36, 34, 32, 30, 20, 10, 0, -20, -40],paCols:[-2000,0,2000,4000,6000,8000],data:[[170, 80, null, null, null, null],[220, 130, -10, null, null, null],[260, 170, 30, null, null, null],[300, 220, 70, -70, null, null],[340, 260, 110, -30, null, null],[380, 300, 150, 10, -130, null],[400, 340, 190, 40, -100, null],[400, 380, 230, 80, -70, -260],[410, 390, 270, 110, -50, -230],[410, 400, 300, 150, -20, -210],[410, 400, 320, 180, 10, -180],[420, 400, 320, 200, 40, -160],[430, 410, 330, 220, 100, -70],[440, 420, 290, 170, 60, -310],[450, 430, 270, 80, -110, -320],[470, 450, 280, 90, -110, -330],[500, 470, 290, 90, -110, -350]],refWt:260,corrAbove:-30,corrBelow:+40},
+  gearDownF25:{tatRows:[52, 50, 48, 46, 44, 42, 40, 38, 36, 34, 32, 30, 20, 10, 0, -20, -40],paCols:[-2000,0,2000,4000,6000,8000],data:[[-150, -250, null, null, null, null],[-110, -210, -350, null, null, null],[-70, -160, -310, null, null, null],[-40, -120, -270, -410, null, null],[0, -80, -230, -370, null, null],[40, -50, -190, -340, -480, null],[60, -10, -160, -300, -450, null],[60, 30, -120, -270, -420, -610],[70, 50, -90, -240, -400, -580],[70, 50, -60, -210, -380, -560],[70, 50, -30, -180, -350, -540],[70, 50, -30, -160, -320, -520],[80, 50, -30, -140, -270, -430],[80, 60, -90, -240, -370, -500],[90, 60, -100, -280, -470, -690],[90, 70, -110, -290, -490, -710],[100, 70, -110, -310, -510, -740]],refWt:260,corrAbove:-40,corrBelow:+30},
+  gearDownF30:{tatRows:[52, 50, 48, 46, 44, 42, 40, 38, 36, 34, 32, 30, 20, 10, 0, -20, -40],paCols:[-2000,0,2000,4000,6000,8000],data:[[-400, -490, null, null, null, null],[-360, -450, -600, null, null, null],[-320, -410, -560, null, null, null],[-290, -380, -520, -660, null, null],[-250, -340, -490, -620, null, null],[-220, -300, -450, -590, -730, null],[-190, -260, -420, -560, -700, null],[-190, -230, -380, -530, -680, -860],[-190, -210, -350, -500, -660, -840],[-190, -210, -330, -470, -630, -820],[-190, -210, -300, -450, -610, -800],[-190, -210, -290, -430, -580, -780],[-180, -210, -300, -410, -530, -700],[-180, -210, -310, -540, -690, -840],[-180, -210, -380, -550, -740, -960],[-190, -220, -390, -570, -770, -990],[-190, -230, -410, -600, -800, -1030]],refWt:260,corrAbove:-40,corrBelow:+40},
+};
+/* 200LR Flaps 30 gear-down ROC (PI-QRH.12.12) — v81, mirrors 300ER F30 cell */
+DATA200LR.gearDownF30={tatRows:[52, 50, 48, 46, 44, 42, 40, 38, 36, 34, 32, 30, 20, 10, 0, -20, -40],paCols:[-2000,0,2000,4000,6000,8000],data:[[-100, -190, null, null, null, null],[-50, -150, -300, null, null, null],[-10, -110, -260, null, null, null],[30, -60, -220, -360, null, null],[70, -20, -180, -320, null, null],[110, 20, -140, -280, -420, null],[140, 60, -100, -250, -400, null],[150, 100, -60, -210, -370, -560],[150, 130, -30, -190, -340, -540],[150, 130, 10, -150, -320, -510],[150, 130, 30, -120, -290, -490],[150, 140, 50, -90, -260, -470],[160, 140, 50, -60, -190, -370],[170, 150, 10, -110, -220, -610],[180, 150, -20, -210, -410, -640],[180, 160, -30, -220, -420, -660],[190, 160, -30, -230, -440, -690]],refWt:220,corrAbove:-40,corrBelow:+40};
+
 /* ============================================================
    HELPER: interpolate 200LR table (altRow x wtCol matrix)
    ============================================================ */
@@ -1286,7 +1309,8 @@ function groundToAir200LR(groundNM, hwKts, twKts) {
 
 /* Gear down ROC with weight correction */
 function gdRoc200LR(flaps, tatC, paFt, wtThousand) {
-  const tbl = flaps===25 ? DATA200LR.gearDownF25 : DATA200LR.gearDownF20;
+  const _D = (window.__currentAcType==='777F') ? DATA777F : DATA200LR; /* v81 */
+  const tbl = flaps===30 ? _D.gearDownF30 : flaps===25 ? _D.gearDownF25 : _D.gearDownF20;
   const tatRows = tbl.tatRows;
   const paCols  = tbl.paCols;
   const data    = tbl.data;
@@ -1330,8 +1354,13 @@ function gdRoc200LR(flaps, tatC, paFt, wtThousand) {
 
 /* VREF 200LR interpolation */
 function vref200LR(flaps, wtThousand, paFt) {
-  const v = DATA200LR.vref;
+  const v = (window.__currentAcType==='777F') ? DATA777F.vref : DATA200LR.vref; /* v81 */
   const sub = flaps===30?v.f30:flaps===25?v.f25:v.f20;
+  if(sub.below && wtThousand < 154.2205){ /* 777F: "154220 & BELOW" row (QRH 30.6) */
+    const cols=sub.altCols, pa=Math.max(cols[0],Math.min(cols[cols.length-1],paFt));
+    let i=0; while(i<cols.length-2 && pa>cols[i+1]) i++;
+    return interpLinear(pa,cols[i],cols[i+1],sub.below[i],sub.below[i+1]);
+  }
   const wtRows = v.wtRows;
   const altCols = sub.altCols;
   const data = sub.data;
@@ -1757,12 +1786,13 @@ function compute(){
     // GD ROC F20 at ALW
     const rocF20=gdRoc200LR(20,oat,pa,alw);
     const rocF25=gdRoc200LR(25,oat,pa,alw);
+    const rocF30=gdRoc200LR(30,oat,pa,alw); /* v81: F30 table (PI-QRH.12.12 / 32.12) */
     const fv=v=>(typeof v==='number'&&!isNaN(v))?v.toFixed(0):'—';
     document.getElementById('grad').innerHTML=
       '<div class="cell"><div class="t">APP/LND CLB GRD</div><div class="v green">'+fv(clbGrd)+'</div></div>'
       +'<div class="cell"><div class="t">GD ROC F20<span class=u>ft/min</span></div><div class="v '+(rocF20!==null&&rocF20>=0?'green':'amber')+'">'+( rocF20!==null?rocF20:'—')+'</div></div>'
       +'<div class="cell"><div class="t">GD ROC F25<span class=u>ft/min</span></div><div class="v '+(rocF25!==null&&rocF25>=0?'green':'amber')+'">'+( rocF25!==null?rocF25:'—')+'</div></div>'
-      +'<div class="cell" style="opacity:.3"><div class="t">EO G/A → see panel below</div><div class="v cyan">↓</div></div>'
+      +'<div class="cell"><div class="t">GD ROC F30<span class=u>ft/min</span></div><div class="v '+(rocF30!==null&&rocF30>=0?'green':'amber')+'">'+( rocF30!==null?rocF30:'—')+'</div></div>'
       +'<div class="cell" style="opacity:.3"><div class="t">OAT</div><div class="v dim">'+oat+'°C</div></div>';
   } else {
     document.getElementById('grad').innerHTML=GRAD_300.map(o=>cellHTML(o,1)).join('');
@@ -1994,13 +2024,19 @@ function render200LR_gdRoc(){
   // TAT approx = OAT + ISA correction already applied; use OAT as TAT for simplicity
   const roc20=gdRoc200LR(20,oat,pa,alw);
   const roc25=gdRoc200LR(25,oat,pa,alw);
+  const roc30=gdRoc200LR(30,oat,pa,alw); /* v81 */
+  const is77F=window.__currentAcType==='777F';
+  const T20=(is77F?DATA777F:DATA200LR).gearDownF20, T25=(is77F?DATA777F:DATA200LR).gearDownF25, T30=(is77F?DATA777F:DATA200LR).gearDownF30;
+  const h2=panel.querySelector('h2'); if(h2) h2.innerHTML=(is77F?'777F':'200LR')+' &#8212; Gear Down Landing Rate of Climb Available (EO) &#183; QRH PI-QRH.'+(is77F?'32':'12')+'.11-12';
+  function corrTxt(T){ return T.corrAbove+'/+'+T.corrBelow; }
   function cls(v){ return(v!==null&&v>=0)?'green':'amber'; }
   out.innerHTML=
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)">'
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--line)">'
     +'<div class="cell"><div class="t">GD ROC FLAPS 20</div><div class="v '+cls(roc20)+'" style="font-size:28px">'+(roc20!==null?roc20:'—')+'<span class=u>ft/min</span></div></div>'
     +'<div class="cell"><div class="t">GD ROC FLAPS 25</div><div class="v '+cls(roc25)+'" style="font-size:28px">'+(roc25!==null?roc25:'—')+'<span class=u>ft/min</span></div></div>'
+    +'<div class="cell"><div class="t">GD ROC FLAPS 30</div><div class="v '+cls(roc30)+'" style="font-size:28px">'+(roc30!==null?roc30:'—')+'<span class=u>ft/min</span></div></div>'
     +'</div>'
-    +'<div style="padding:6px 12px;font-size:9px;color:var(--dim)">Ref 220 t · corr ±40/50 ft/min per 5000 kg · ALW='+alw.toFixed(1)+'t · OAT='+oat+'°C · PA='+Math.round(pa)+' ft · Ref: PI-QRH.12.11</div>';
+    +'<div style="padding:6px 12px;font-size:9px;color:var(--dim)">Ref '+T20.refWt+' t · corr per 5000 kg above/below: F20 '+corrTxt(T20)+' · F25 '+corrTxt(T25)+' · F30 '+corrTxt(T30)+' ft/min · ALW='+alw.toFixed(1)+'t · OAT='+oat+'°C (as TAT) · PA='+Math.round(pa)+' ft</div>';
 }
 
 /* --- 200LR Landing Limits panel (existing from v55) --- */
@@ -2102,7 +2138,7 @@ function compute(){
     const vr=get200LR_vref_landing();
     function vs(l,v){ return '<div style="display:flex;flex-direction:column;align-items:center;flex:1"><div style="font-size:8.5px;color:var(--dim)">'+l+'</div><div class="v green" style="font-size:26px">'+(v!==null?Math.round(v):'—')+'</div></div>'; }
     $('L_speeds').innerHTML=
-      '<div class="cell" style="grid-column:1/-1"><div class="t">VREF (200LR · PI-QRH.10.6)</div><div style="display:flex;gap:6px;margin-top:6px">'+vs('F30',vr.v30)+vs('F25',vr.v25)+vs('F20',vr.v20)+'</div></div>'
+      '<div class="cell" style="grid-column:1/-1"><div class="t">VREF ('+(window.__currentAcType==='777F'?'777F · PI-QRH.30.6':'200LR · PI-QRH.10.6')+')</div><div style="display:flex;gap:6px;margin-top:6px">'+vs('F30',vr.v30)+vs('F25',vr.v25)+vs('F20',vr.v20)+'</div></div>'
       +'<div class="cell" style="grid-column:1/-1"><div class="t">GROUND SPEED</div><div style="display:flex;gap:6px;margin-top:6px">'+vs('GS 30',vr.gs30)+vs('GS 25',vr.gs25)+vs('GS 20',vr.gs20)+'</div></div>';
   } else {
     $('L_speeds').innerHTML=
@@ -2371,7 +2407,7 @@ buildInputs(); compute();
    RNAV HOT WX MODULE
    ============================================================ */
 (function(){
-let state={gp:3.0,papi:3.5,gs:145,temp:40,elev:0};
+let state={gp:3.0,papi:3.0,gs:145,temp:40,elev:0}; /* v81: PAPI default 3.0 */
 function $(id){ return document.getElementById(id); }
 function inp(id){ return parseFloat((($(id)||{}).value)||'0')||0; }
 function compute(){
@@ -2398,7 +2434,24 @@ function compute(){
     +cell('RNAV PATH ACTUAL (BARO)',gpCorr.toFixed(2),'green','°')+cell('RNAV V/S @ '+gs+'kts',vsi,'green','ft/min')+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)">'
     +cell('PAPI (GEOMETRIC)',papiCorr.toFixed(2),'amber','°')+cell('PAPI V/S @ '+gs+'kts',papiVsi,'amber','ft/min')+'</div>'
-    +'<div style="padding:7px 12px;font-size:10px;color:var(--dim);line-height:1.4">Baro path vs PAPI: <b style="color:'+(Math.abs(dAng)<0.2?'var(--green)':'var(--amber)')+'">'+(dAng>=0?'+':'')+dAng.toFixed(2)+'°</b> '+(dAng>0.05?'(baro path above PAPI → expect more whites)':dAng<-0.05?'(baro path below PAPI → expect more reds)':'(on PAPI)')+'</div>';
+    +papiBox();
+  /* v81: PAPI picture seen while flying the baro-VNAV path.
+     4-light PAPI, ICAO settings around the PAPI angle P: P-30', P-10', P+10', P+30'.
+     A light shows WHITE when the eye is above its setting angle. */
+  function papiBox(){
+    const sets=[papi-0.5,papi-1/6,papi+1/6,papi+0.5];
+    const whites=sets.filter(a=>gpCorr>a).length, reds=4-whites;
+    const txt=whites===2?'2 RED · 2 WHITE — ON PAPI':whites===4?'4 WHITE — HIGH':whites===3?'1 RED · 3 WHITE — SLIGHTLY HIGH':whites===1?'3 RED · 1 WHITE — SLIGHTLY LOW':'4 RED — LOW';
+    const col=whites===2?'var(--green)':(whites===0||whites===4)?'var(--red)':'var(--amber)';
+    let lights='';
+    for(let i=0;i<4;i++){ const w=i<whites; lights+='<span style="display:inline-block;width:26px;height:26px;border-radius:50%;margin:0 5px;background:'+(w?'#f4f6f8':'#e0302a')+';box-shadow:0 0 10px '+(w?'rgba(255,255,255,.6)':'rgba(224,48,42,.7)')+'"></span>'; }
+    return '<div class="cell" style="align-items:center;text-align:center;gap:8px">'
+      +'<div class="t">PAPI ON BARO-VNAV PATH</div>'
+      +'<div style="display:flex;justify-content:center;padding:4px 0">'+lights+'</div>'
+      +'<div class="v" style="font-size:18px;color:'+col+'">'+txt+'</div>'
+      +'<div style="font-size:9.5px;color:var(--dim)">Baro path '+gpCorr.toFixed(2)+'° vs PAPI '+papi.toFixed(2)+'° ('+(dAng>=0?'+':'')+dAng.toFixed(2)+'°) · assumes path and PAPI share the same origin</div>'
+      +'</div>';
+  }
 }
 ['R_gp','R_papi','R_gs'].forEach(id=>{ const el=$(id); if(el){ el.onchange=function(){ if(id==='R_gs'){ state.gsManual=(el.value.trim()!==''); if(!state.gsManual) el.value=state.gs; } compute(); }; el.onblur=compute; } });
 window.__rnavReceive=function(d){
@@ -2444,7 +2497,7 @@ function compute(){
   // Expose holding params for Live Holding Display
   try{
     if(fob>0&&frsv>0&&totalFF>0){
-      var _ac=window.__currentAcType||'300ER';
+      var _ac=window.__acVariant||window.__currentAcType||'300ER';
       window.__divFuelHoldingParams={
         hpName:hp, destination:dn, alternate1:a1n, alternate2:a2n, aircraft:_ac,
         expectedFOB:fob, finalReserve:frsv, holdingFlowKgHr:totalFF,
@@ -2566,7 +2619,7 @@ function renderShortTripFuel(){
   if(isNaN(gd)||isNaN(lw)){ out.style.display='none'; return; }
   if(isNaN(wind)) wind=0;
   var ac=window.__currentAcType||'300ER';
-  var acLabel=ac==='777F'?'777F':ac==='200LR'?'777-200LR':'777-300ER';
+  var acLabel=ac==='777F'?'777F':ac==='200LR'?'777-200LR':(window.__acVariant==='300ERSF'?'777-300ERSF':'777-300ER');
   var air=window.__STF.groundToAir(gd,wind,ac);
   var r=window.__STF.tripFuel(air,lw,ac);
   var windTxt=wind>0?('TW '+wind+' kt'):wind<0?('HW '+Math.abs(wind)+' kt'):'no wind';
@@ -2801,7 +2854,7 @@ function compute(){
   const wt=parseFloat(wtRaw);
   const altFt=parseFloat(altRaw);
   const out=$('U_out'); if(!out)return;
-  const title=$('U_title'); const _al=window.__currentAcType==='777F'?'777F':window.__currentAcType==='200LR'?'777-200LR':'777-300ER'; if(title) title.textContent=_al+' — Pitch / Power / Speed by phase';
+  const title=$('U_title'); const _al=window.__currentAcType==='777F'?'777F':window.__currentAcType==='200LR'?'777-200LR':(window.__acVariant==='300ERSF'?'777-300ERSF':'777-300ER'); if(title) title.textContent=_al+' — Pitch / Power / Speed by phase';
   // Sea level (0 ft) is a valid altitude — only treat truly empty / non-numeric as missing.
   if(wtRaw===''||altRaw===''||isNaN(wt)||isNaN(altFt)||wt<=0){ out.innerHTML='<div style="padding:14px;color:var(--dim);font-size:12px">Enter gross weight (1000 kg) and pressure altitude (ft) to see pitch/power/speed references.</div>'; return; }
   if(window.__currentAcType==='200LR'||window.__currentAcType==='777F'){
@@ -2859,7 +2912,7 @@ compute();
     var st={};
     IDS.forEach(function(id){ var el=document.getElementById(id); if(!el) return; st[id]=el.tagName==='SELECT'?el.value:(el.value||''); });
     if(window.__engineCells){ var ec={}; Object.keys(window.__engineCells).forEach(function(r){ var v=window.__engineCells[r]; if(typeof v==='number'||(v&&typeof v==='object'&&'__str' in v)) ec[r]=v; }); st.__ec=ec; }
-    st.__ac=window.__currentAcType||'300ER'; st.__lVrefxAb=window.__lVrefxAb||''; st.__dfHoldFlap=window.__dfHoldFlap||'';
+    st.__ac=window.__acVariant||window.__currentAcType||'300ER'; st.__lVrefxAb=window.__lVrefxAb||''; st.__dfHoldFlap=window.__dfHoldFlap||'';
     try{ localStorage.setItem(KEY,JSON.stringify(st)); }catch(e){}
   };
   window.__persistRestore=function(){
@@ -2933,11 +2986,16 @@ window.showInfoGlobal=showInfo;
    AC TYPE SELECTOR
    ============================================================ */
 function setAcType(type){
+  /* v81: 300ERSF = 300ER performance data (QRH PI-QRH.20 "777-300ER/-300ERSF";
+     FCOM PD.40 for the SF contains only oxygen tables). Variant kept for labels. */
+  var variant=type;
+  if(type==='300ERSF') type='300ER';
+  window.__acVariant=variant;
   window.__currentAcType=type;
-  const b300=document.getElementById('acBtn300'),b200=document.getElementById('acBtn200'),b77F=document.getElementById('acBtn77F');
-  [['300ER',b300],['200LR',b200],['777F',b77F]].forEach(function(pair){ var b=pair[1]; if(!b)return; b.style.background=(type===pair[0])?'var(--amber)':'transparent'; b.style.color=(type===pair[0])?'var(--bg)':'var(--dim)'; });
+  const b300=document.getElementById('acBtn300'),bSF=document.getElementById('acBtnSF'),b200=document.getElementById('acBtn200'),b77F=document.getElementById('acBtn77F');
+  [['300ER',b300],['300ERSF',bSF],['200LR',b200],['777F',b77F]].forEach(function(pair){ var b=pair[1]; if(!b)return; b.style.background=(variant===pair[0])?'var(--amber)':'transparent'; b.style.color=(variant===pair[0])?'var(--bg)':'var(--dim)'; });
   const lbl=document.getElementById('acTypeLabel');
-  if(lbl) lbl.textContent=type==='300ER'?'777-300ER / 300ERSF':type==='777F'?'777F / GE90-110B1L':'777-200LR / GE90-110B1L';
+  if(lbl) lbl.textContent=variant==='300ER'?'777-300ER / GE90-115BL':variant==='300ERSF'?'777-300ERSF / GE90-115BL':type==='777F'?'777F / GE90-110B1L':'777-200LR / GE90-110B1L';
   if(window.__landingSetAcType) window.__landingSetAcType(type);
   if(window.__unrelSetAcType) window.__unrelSetAcType(type);
   if(window.__takeoffSetAcType) window.__takeoffSetAcType(type);
