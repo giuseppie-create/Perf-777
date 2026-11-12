@@ -453,7 +453,7 @@ select:focus{border-color:var(--amber)}
     </div>
     <span id="netDot" title="Network" style="width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block"></span>
     <span class="sub" id="ts">—</span>
-    <span class="sub" style="color:var(--green)">v80</span>
+    <span class="sub" style="color:var(--green)">v81</span>
   </div>
 </header>
 <div class="tabs">
@@ -537,7 +537,7 @@ select:focus{border-color:var(--amber)}
     <div id="ga200out"></div>
   </div>
 </div>
-<div class="foot">Perf 777 v80 &#183; 300ER + 200LR &#183; uso offline iPad</div>
+<div class="foot">Perf 777 v81 &#183; 300ER + 200LR &#183; uso offline iPad</div>
 </div>
 
 <!-- ===== LANDING MODULE ===== -->
@@ -568,7 +568,7 @@ select:focus{border-color:var(--amber)}
       <h2>Landing data</h2>
       <div class="inrow"><span class="lab">ALW (Landing Weight) t</span><input type="text" inputmode="decimal" id="L_alw" step="0.1"></div>
       <div class="inrow" style="background:rgba(57,194,215,0.06)"><span class="lab" style="color:var(--cyan)">Pre-set fuel on arrival t<span style="color:var(--dim);font-size:9px"> &#8212; from Take Off</span></span><input type="text" inputmode="decimal" id="L_onarr" step="0.1" placeholder="&#8212;"></div>
-      <div class="inrow"><span class="lab">VREF / VREF X<button class="ibtn" id="L_vrefxInfo" style="border-color:var(--cyan);color:var(--cyan)">i</button></span><input type="text" inputmode="decimal" id="L_vrefx" step="1" placeholder="auto"></div>
+      <div class="inrow"><span class="lab">VREF X <span style="color:var(--dim);font-size:9px">(blank = VREF 30)</span><button class="ibtn" id="L_vrefxInfo" style="border-color:var(--cyan);color:var(--cyan)">i</button></span><input type="text" inputmode="decimal" id="L_vrefx" step="1" placeholder="auto"></div>
       <div class="inrow"><span class="lab">TAXI MILE corr.</span><input type="text" inputmode="decimal" id="L_taxi" step="1"></div>
       <div class="inrow"><span class="lab">Brake deactivated (0/1)</span><input type="text" inputmode="decimal" id="L_bdeact" step="1"></div>
     </div>
@@ -576,7 +576,7 @@ select:focus{border-color:var(--amber)}
   <div class="ioz">Output</div>
   <div class="iobot">
     <div class="card cardwide"><h2>Weights (t)</h2><div class="grid" id="L_weights" style="grid-template-columns:1fr 1fr"></div></div>
-    <div class="card cardwide"><h2>Speeds &#8212; IAS sopra / GND sotto</h2><div class="grid" id="L_speeds" style="grid-template-columns:1fr"></div></div>
+    <div class="card cardwide"><h2>Speed</h2><div class="grid" id="L_speeds" style="grid-template-columns:1fr"></div></div>
     <div class="obrow cardwide">
       <div class="card"><h2>Autobrake / Brake Temp</h2><div class="grid" id="L_autobrake" style="grid-template-columns:1fr"></div></div>
       <div class="card"><h2>Brake temp &#8212; gear down inflight</h2><div class="grid" id="L_gearbtms" style="grid-template-columns:1fr"></div></div>
@@ -621,7 +621,7 @@ select:focus{border-color:var(--amber)}
       <div style="padding:8px 16px;font-size:10.5px;color:var(--dim);border-bottom:1px solid var(--line);line-height:1.4">Temp and elevation are inherited from the Landing module.</div>
       <div class="inrow"><span class="lab">RNAV GP (°)</span><input type="text" inputmode="decimal" id="R_gp" step="0.1"></div>
       <div class="inrow"><span class="lab">PAPI angle (°)</span><input type="text" inputmode="decimal" id="R_papi" step="0.1"></div>
-      <div class="inrow"><span class="lab">Ground speed (kts)</span><input type="text" inputmode="decimal" id="R_gs" step="1"></div>
+      <div class="inrow"><span class="lab">Ground speed (kts) <span style="color:var(--dim);font-size:9px">(auto from Landing)</span></span><input type="text" inputmode="decimal" id="R_gs" step="1"></div>
       <div class="inrow"><span class="lab" style="color:var(--dim)">Temp (°C)</span><span id="R_temp" style="color:var(--dim);font-variant-numeric:tabular-nums">—</span></div>
       <div class="inrow"><span class="lab" style="color:var(--dim)">Elevation (ft)</span><span id="R_elev" style="color:var(--dim);font-variant-numeric:tabular-nums">—</span></div>
     </div>
@@ -1521,6 +1521,11 @@ window.__STF = (function(){
 (function(){
 let cells = JSON.parse(JSON.stringify(SHEET.takeoff));
 let externals = {'Landing perf!B4': SHEET.landing_B4};
+/* v81: VREF 25/20 use the two-row bracket (like VREF 30), not a regression over the
+   whole table. VREF 20 (F4) pointed to the VREF 25 cell (GV320) — now GY320. */
+cells['GV320']='=FORECAST(C4,GT322:GU322,GT321:GU321)';
+cells['GY320']='=FORECAST(C4,GW322:GX322,GW321:GX321)';
+cells['F4']='=GY320';
 let engine = makeEngine(cells, externals);
 window.__engineCells=cells;
 
@@ -1547,6 +1552,7 @@ async function callClaude(payload){
   if(!resp.ok){ let msg='HTTP '+resp.status; try{ const e=await resp.json(); if(e&&e.error&&e.error.message) msg=e.error.message; }catch(_){} throw new Error(msg); }
   return resp.json();
 }
+window.__callClaude=callClaude; /* v81: shared with Landing METAR (sends API key) */
 
 function rawVal(ref){ const v=cells[ref]; if(typeof v==='number')return v; if(v&&typeof v==='object'&&'__str' in v)return v.__str; return v; }
 function fmt(v,dec){ if(typeof v!=='number'||isNaN(v))return '—'; return v.toFixed(dec===undefined?0:dec); }
@@ -1744,7 +1750,7 @@ function compute(){
     /* 200LR: APP/LND CLB uses 300ER table (same aircraft category);
        EO G/A shown from goAround panel below; GD LCRA from GD tables */
     const alw=parseFloat(document.getElementById('cfg_alw').value)||257;
-    const oat=parseFloat(document.getElementById('cfg_oat').value)||40;
+    const _oatRaw=parseFloat(document.getElementById('cfg_oat').value); const oat=isNaN(_oatRaw)?40:_oatRaw; /* v81: 0 °C is valid */
     const pa=((parseFloat(document.getElementById('cfg_elev').value)||0)+(1013-(parseFloat(document.getElementById('cfg_qnh').value)||1013))*27);
     // App/Lnd Climb: use 300ER engine value (same FAR requirement)
     let clbGrd; try{ clbGrd=engine.get('D13'); }catch(e){ clbGrd=NaN; }
@@ -1870,11 +1876,18 @@ window.__takeoffSetAcType=function(type){ compute(); };
 /* VREF X brake energy via the (already verified) takeoff brake chain.
    gndSpd = weather-corrected VREF X ground speed (from Landing D6).
    abSel  = autobrake selection string. Returns {inflight, ground, btms}. */
-window.__takeoffBrakeVrefX=function(gndSpd, abSel){
+window.__takeoffBrakeVrefX=function(gndSpd, abSel, opt){
   try{
     if(typeof gndSpd!=='number'||isNaN(gndSpd)||gndSpd<=0) return null;
     // Save originals so the takeoff display is not disturbed.
     var origG6=cells['G6'], origG7=cells['G7'];
+    // v81: chain weight (C4), taxi mile (C7), brake deactivated (C9) come from the
+    // caller (Landing ALW / TAXI MILE / Brake deact.), not from the Take Off return weight.
+    var origC4=cells['C4'], origC7=cells['C7'], origC9=cells['C9'];
+    opt=opt||{};
+    if(typeof opt.wt==='number'&&opt.wt>0){ cells['C4']=opt.wt; engine.setInput('C4',opt.wt); }
+    if(typeof opt.taxi==='number'&&!isNaN(opt.taxi)){ cells['C7']=opt.taxi; engine.setInput('C7',opt.taxi); }
+    if(typeof opt.bdeact==='number'&&!isNaN(opt.bdeact)){ cells['C9']=opt.bdeact; engine.setInput('C9',opt.bdeact); }
     // Inject ground speed as G6 (override its formula with a literal), set autobrake G7.
     cells['G6']=gndSpd; engine.setInput('G6',gndSpd);
     if(abSel){ cells['G7']={__str:abSel}; engine.setInput('G7',abSel); }
@@ -1886,6 +1899,9 @@ window.__takeoffBrakeVrefX=function(gndSpd, abSel){
     // Restore originals and recompute so takeoff view is unaffected.
     cells['G6']=origG6; engine.setInput('G6',origG6);
     cells['G7']=origG7; engine.setInput('G7',origG7&&origG7.__str?origG7.__str:origG7);
+    cells['C4']=origC4; engine.setInput('C4',origC4);
+    cells['C7']=origC7; engine.setInput('C7',origC7);
+    cells['C9']=origC9; engine.setInput('C9',origC9);
     engine.clearCache&&engine.clearCache();
     return {inflight:inflight, ground:ground, btms:btms};
   }catch(e){ return null; }
@@ -1906,6 +1922,9 @@ const LSHEET={"B2":{"__str":"Table 1"},"B3":{"__str":"ALW"},"C3":{"__str":"VREF 
 
 const AB_OPTIONS=["RTO MAX MAN 2 REV","MAX MAN 2 REV","MAX AUTO 2 REV","AUTOBRAKE 4 2 REV","AUTOBRAKE 3 2 REV","AUTOBRAKE 2 2 REV","AUTOBRAKE 1 2 REV","RTO MAX MAN  REV IDLE","MAX MAN REV IDLE"," MAX AUTO REV IDLE","AUTOBRAKE 4 REV IDLE","AUTOBRAKE 3 REV IDLE","AUTOBRAKE 2 REV IDLE","AUTOBRAKE 1 REV IDLE","RTO MAX MAN NO REV","MAX MAN NO REV","MAX AUTO NO REV","AUTOBRAKE 4 NO REV","AUTOBRAKE 3 NO REV","AUTOBRAKE 2 NO REV","AUTOBRAKE 1 NO REV"];
 let lcells=JSON.parse(JSON.stringify(LSHEET));
+/* v81: VREF 25/20 via two-row bracket (helper cells AN/AO, AQ/AR already in sheet) */
+lcells['AP57']='=FORECAST($B4,AN59:AO59,AN58:AO58)';
+lcells['AS57']='=FORECAST($B4,AQ59:AR59,AQ58:AR58)';
 let lengine=makeEngine(lcells,{});
 let lastWind={wdir:null,wspd:null};
 
@@ -1968,7 +1987,7 @@ function render200LR_gdRoc(){
   panel.style.display=is200?'block':'none';
   if(!is200)return;
   const alw=parseFloat($('L_alw')?$('L_alw').value:'257')||257;
-  const oat=parseFloat($('L_oat')?$('L_oat').value:'40')||40;
+  const _oatRaw=parseFloat($('L_oat')?$('L_oat').value:'40'); const oat=isNaN(_oatRaw)?40:_oatRaw; /* v81: 0 °C is valid */
   const elev=parseFloat($('L_elev')?$('L_elev').value:'0')||0;
   const qnh=parseFloat($('L_qnh')?$('L_qnh').value:'1013')||1013;
   const pa=elev+(1013-qnh)*27;
@@ -2073,6 +2092,7 @@ function compute(){
       if(typeof vref30==='number' && !isNaN(vref30) && vref30>0){
         var rounded=Math.round(vref30);
         lcells['C6']=rounded; lengine.setInput('C6',rounded);
+        vxEl.placeholder=rounded+' (VREF 30)'; /* v81: show the auto value */
       }
     }
   }catch(e){}
@@ -2101,7 +2121,12 @@ function compute(){
       // VREF X autobrake selection (separate from Flap 30). Stored in window.__lVrefxAb.
       var vrefxAb=window.__lVrefxAb||AB_OPTIONS[0];
       // Compute VREF X brake energy via the verified takeoff chain.
-      var vx=(window.__takeoffBrakeVrefX&&typeof vrefxGS==='number')?window.__takeoffBrakeVrefX(vrefxGS,vrefxAb):null;
+      // v81: landing weight / taxi mile / brake deactivated from the Landing inputs
+      var _lw=lcells['B4'], _tx=lcells['G4'], _bd=lcells['H4'];
+      var brkOpt={wt:(typeof _lw==='number'&&_lw>0)?_lw:undefined,
+                  taxi:(typeof _tx==='number')?_tx:undefined,
+                  bdeact:(typeof _bd==='number')?_bd:undefined};
+      var vx=(window.__takeoffBrakeVrefX&&typeof vrefxGS==='number')?window.__takeoffBrakeVrefX(vrefxGS,vrefxAb,brkOpt):null;
       function fmtCell(val){
         if(val===null||val===undefined) return {t:'—',c:'var(--dim)'};
         var str,col;
@@ -2128,7 +2153,7 @@ function compute(){
       var f30GS=null; try{ f30GS=lengine.get('D4'); }catch(e){ f30GS=null; }
       var f30Ab=rawVal('F3')||AB_OPTIONS[0];
       var f30=(window.__takeoffBrakeVrefX&&typeof f30GS==='number'&&!isNaN(f30GS)&&f30GS>0)
-              ?window.__takeoffBrakeVrefX(f30GS,f30Ab):null;
+              ?window.__takeoffBrakeVrefX(f30GS,f30Ab,brkOpt):null;
       function fmtB(val){
         if(val===null||val===undefined)return{t:'\u2014',c:'var(--dim)'};
         var str,col;
@@ -2181,14 +2206,14 @@ function compute(){
     }
     const manual=$('L_btmsManual')?$('L_btmsManual').value:'';
     const gd=gearFromBTMS(manual);
-    const isText=!/^\d+\s*min$/.test(gd);
+    const isText=!/^\d+\s*min$/.test(gd)&&gd.indexOf('NO SPECIAL')<0; /* v81: no special procedure = green */
     $('L_gearbtms').innerHTML='<div class="cell" style="grid-column:1/-1"><div class="t">BRAKE TEMP — GEAR DOWN INFLIGHT TIME</div>'
       +'<div style="display:flex;align-items:center;gap:14px;margin-top:8px">'
       +'<div style="flex:1"><div style="font-size:9px;color:var(--dim);margin-bottom:3px">ENTER BTMS</div>'
       +'<input type="text" inputmode="decimal" id="L_btmsManual" step="0.1" value="'+(manual||'')+'" style="width:100%;text-align:center" placeholder="—"></div>'
       +'<div style="flex:1.4;text-align:center"><div style="font-size:9px;color:var(--dim);margin-bottom:3px">GEAR DOWN INFLIGHT</div>'
       +'<div class="v '+(isText?'amber':'green')+'" style="font-size:'+(isText?'15px':'24px')+';line-height:1.15">'+gd+'</div></div></div></div>';
-    const bm=$('L_btmsManual'); if(bm) bm.oninput=()=>{ const g=gearFromBTMS(bm.value); const it=!/^\d+\s*min$/.test(g); const out2=bm.closest('.cell').querySelector('.v'); if(out2){ out2.textContent=g; out2.className='v '+(it?'amber':'green'); out2.style.fontSize=it?'15px':'24px'; } };
+    const bm=$('L_btmsManual'); if(bm) bm.oninput=()=>{ const g=gearFromBTMS(bm.value); const it=!/^\d+\s*min$/.test(g)&&g.indexOf('NO SPECIAL')<0; const out2=bm.closest('.cell').querySelector('.v'); if(out2){ out2.textContent=g; out2.className='v '+(it?'amber':'green'); out2.style.fontSize=it?'15px':'24px'; } };
   }
 
   document.querySelectorAll('#mod-landing .ab-sel').forEach(function(sel){ if(!sel.getAttribute('data-sel')) return; // skip L_vrefxAbSel which has no data-sel
@@ -2200,6 +2225,18 @@ function compute(){
   /* 200LR specific panels */
   render200LR_ldgLimits();
   render200LR_gdRoc();
+
+  /* v81: always push airport data to ILS / RNAV so they never go stale
+     (before: only when OAT/elev/wind changed; ALW change was not propagated) */
+  try{
+    if(window.__ilsReceive) window.__ilsReceive({elev:lcells['I17'],oat:lcells['I13']});
+    if(window.__rnavReceive){
+      let gs;
+      if(is200){ const vr=get200LR_vref_landing(); if(typeof vr.gs30==='number') gs=vr.gs30; }
+      else { try{ const d4=lengine.get('D4'); if(typeof d4==='number'&&!isNaN(d4)) gs=Math.round(d4); }catch(e){} }
+      window.__rnavReceive({elev:lcells['I17'],temp:lcells['I13'],gs});
+    }
+  }catch(e){}
 }
 
 window.__landingRenderLW=function(){ try{ renderLW(); }catch(e){} };
@@ -2221,9 +2258,12 @@ function renderLW(){
 
 function buildInputs(){
   const map=[['L_alw','B4'],['L_vrefx','C6'],['L_taxi','G4'],['L_bdeact','H4'],['L_oat','I13'],['L_qnh','I15'],['L_elev','I17'],['L_hw','J13'],['L_tw','J15'],['L_spd','J17']];
-  map.forEach(([id,ref])=>{ const el=$(id); if(!el)return; const v=rawVal(ref); el.value=(typeof v==='number')?v:(v||''); el.onchange=e=>setInput(ref,e.target.value); });
+  map.forEach(([id,ref])=>{ const el=$(id); if(!el)return; const v=rawVal(ref);
+    /* v81: VREF X starts blank so it auto-follows VREF 30 (sheet default 148 was blocking the auto-fill) */
+    el.value=(id==='L_vrefx')?'':((typeof v==='number')?v:(v||''));
+    el.onchange=e=>setInput(ref,e.target.value); });
   const rwy=$('L_rwy'); if(rwy) rwy.oninput=()=>recomputeWind();
-  const vi=$('L_vrefxInfo'); if(vi) vi.onclick=e=>{ e.stopPropagation(); if(window.showInfoGlobal) window.showInfoGlobal('VREF / VREF X','Auto-filled with landing VREF 30 (from landing weight). Overwrite with VREF plus your additive here to get the actual brake temp / BTMS for VREF X.'); };
+  const vi=$('L_vrefxInfo'); if(vi) vi.onclick=e=>{ e.stopPropagation(); if(window.showInfoGlobal) window.showInfoGlobal('VREF X','Leave blank: the app uses VREF 30 from the VREF table at the Landing ALW (shown in grey in the field). Type a speed (e.g. VREF + additive, or VREF 25/20 + additive) to get brake energy / BTMS for that speed. Flap 30 block is always computed separately from VREF 30.'); };
 }
 
 function parseRwyHdg(rwy){ if(!rwy)return null; const m=String(rwy).match(/^(\d{1,2})/); if(!m)return null; let n=parseInt(m[1],10); if(isNaN(n)||n<1||n>36)return null; return n*10; }
@@ -2238,8 +2278,8 @@ function setupMetar(){
     if(icao.length!==4){ status.style.display='block'; status.style.color='var(--amber)'; status.textContent='⚠ Enter a valid 4-letter ICAO code first.'; return; }
     status.style.display='block'; status.style.color='var(--cyan)'; status.textContent='Fetching METAR for '+icao+'…';
     try{
-      const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:'Fetch the latest METAR for airport ICAO '+icao+' and return ONLY JSON, no markdown. Fields: {"oat":<C int>,"qnh":<hPa int>,"elev":<ft int or null>,"wdir":<deg int or null>,"wspd":<kt int>,"raw":"<raw>"}. If unavailable use null.'}],tools:[{type:'web_search_20250305',name:'web_search'}]})});
-      const data=await resp.json();
+      if(!window.__callClaude) throw new Error('API not ready');
+      const data=await window.__callClaude({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:'Fetch the latest METAR for airport ICAO '+icao+' and return ONLY JSON, no markdown. Fields: {"oat":<C int>,"qnh":<hPa int>,"elev":<ft int or null>,"wdir":<deg int or null>,"wspd":<kt int>,"raw":"<raw>"}. If unavailable use null.'}],tools:[{type:'web_search_20250305',name:'web_search'}]});
       let txt=(data.content||[]).map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
       const jm=txt.match(/\{[\s\S]*\}/); if(!jm)throw new Error('no json');
       const m=JSON.parse(jm[0]);
@@ -2254,7 +2294,7 @@ function setupMetar(){
       const c=windComp(wdir,wspd,parseRwyHdg($('L_rwy').value)); let wm='';
       if(c){ setInput('J13',c.hw); $('L_hw').value=c.hw; setInput('J15',c.tw); $('L_tw').value=c.tw; wm=' HW '+c.hw+'/TW '+c.tw+'.'; }
       status.style.color='var(--green)'; status.textContent='✓ '+icao+' loaded. OAT '+(oat!==null?oat:'—')+'°C, QNH '+(qnh!==null?qnh:'—')+'.'+wm;
-    }catch(err){ status.style.color='var(--amber)'; status.textContent='⚠ METAR import failed. Enter manually.'; }
+    }catch(err){ status.style.color='var(--amber)'; status.textContent='⚠ METAR import failed: '+(err&&err.message?err.message:'unknown')+'. Enter manually.'; }
   };
 }
 
@@ -2287,10 +2327,17 @@ window.__landingCompute=compute;
 (function(){
 const SHEET_ILS={"A2":{"__str":"PROCEDURE HOT TEMP CORRECTION"},"B4":3,"C4":"=Z1","D4":"=Z2-U39","E4":2000,"F4":0,"D5":{"__str":"Alt. Reading"},"E5":"=(E4-C4)-((D4*0.004*(E4-C4)))+C4","F5":"=(F4-C4)-((D4*0.004*(F4-C4)))+C4","H5":"=(E4-E5)/300","I9":2.9,"J9":"=(5-$I9)*(E5/$I9)+E5","K9":"=E5-(($I9-2.5)*E5/$I9)","R25":0,"S25":15,"R26":1000,"S26":13,"R27":2000,"S27":11,"R28":3000,"S28":9,"R29":4000,"S29":7,"R30":5000,"S30":5,"R31":6000,"S31":3,"R32":7000,"S32":1,"R33":8000,"S33":-1,"R34":9000,"S34":-3,"U38":"=MATCH(C4,$R25:$R34)","U39":"=_xlfn.SINGLE(INDEX(S25:S34,U38,1))","Z1":0,"Z2":40};
 let cells=JSON.parse(JSON.stringify(SHEET_ILS));
+/* v81 fixes:
+   - ISA at airport elevation interpolated (was a 1000 ft step lookup: up to 2 °C error)
+   - beam formulas used a fixed 2.9° (I9) — now the ILS GP entered (B4)
+   - distance to fix used fixed 300 ft/NM — now ft/NM of the entered GP (≈106 × GP°) */
+cells['D4']='=Z2-(15-(C4*0.00198))';
+cells['I9']='=B4';
+cells['H5']='=IF(B4>0,(E4-E5)/(B4*106.1),0)';
 let engine=makeEngine(cells,{});
 function $(id){ return document.getElementById(id); }
 function setInput(ref,val){ const n=parseFloat(val); cells[ref]=isNaN(n)?0:n; engine.setInput(ref,cells[ref]); compute(); }
-function g(ref,dec){ let v; try{ v=engine.get(ref); }catch(e){ v=NaN; } return(typeof v==='number'&&!isNaN(v))?v.toFixed(dec===undefined?0:dec):'—'; }
+function g(ref,dec){ let v; try{ v=engine.get(ref); }catch(e){ v=NaN; } return(typeof v==='number'&&isFinite(v))?v.toFixed(dec===undefined?0:dec):'—'; }
 function cell(t,ref,unit,dec,info){
   const ib=info?'<button class="ibtn" data-info="'+encodeURIComponent(info)+'" data-title="'+encodeURIComponent(t)+'" style="border-color:var(--cyan);color:var(--cyan)">i</button>':'';
   return '<div class="cell"><div class="t">'+t+ib+'</div><div class="v green">'+g(ref,dec)+(unit?'<span class=u>'+unit+'</span>':'')+'</div></div>';
@@ -2330,11 +2377,17 @@ function inp(id){ return parseFloat((($(id)||{}).value)||'0')||0; }
 function compute(){
   const gp=inp('R_gp')||state.gp, papi=inp('R_papi')||state.papi, gs=inp('R_gs')||state.gs;
   const temp=state.temp, elev=state.elev;
-  const isa=temp-(15-elev/1000*2);
+  const isa=temp-(15-elev*0.00198);
   const corrFactor=isa>0?(1+0.004*isa):1;
-  const gpCorr=gp/corrFactor, papiCorr=papi/corrFactor;
-  const vsi=Math.round(gs*Math.tan(gpCorr*Math.PI/180)*101.3);
-  const papiVsi=Math.round(gs*Math.tan(papiCorr*Math.PI/180)*101.3);
+  /* v81: hot temperature makes the baro-VNAV path STEEPER than published
+     (true height = indicated x factor). Before, the angle was divided -> shallower,
+     and the VSI came out too low. PAPI is geometric: not affected by temperature. */
+  const rad=Math.PI/180;
+  const gpCorr=Math.atan(Math.tan(gp*rad)*corrFactor)/rad;   // actual baro-VNAV path angle
+  const papiCorr=papi;                                        // PAPI unchanged (geometric)
+  const vsi=Math.round(gs*Math.tan(gpCorr*rad)*101.27);       // V/S needed on the baro path
+  const papiVsi=Math.round(gs*Math.tan(papi*rad)*101.27);     // V/S to stay on PAPI
+  const dAng=gpCorr-papi;
   if($('R_temp')) $('R_temp').textContent=temp+'°C';
   if($('R_elev')) $('R_elev').textContent=elev+' ft';
   const out=$('R_out'); if(!out)return;
@@ -2342,16 +2395,17 @@ function compute(){
   out.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)">'
     +cell('ISA DEVIATION',(isa>=0?'+':'')+isa.toFixed(0),'amber','°C')+cell('CORRECTION FACTOR',corrFactor.toFixed(3),'cyan')+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)">'
-    +cell('RNAV GP CORRECTED',gpCorr.toFixed(2),'green','°')+cell('RNAV VSI @ '+gs+'kts',vsi,'green','ft/min')+'</div>'
+    +cell('RNAV PATH ACTUAL (BARO)',gpCorr.toFixed(2),'green','°')+cell('RNAV V/S @ '+gs+'kts',vsi,'green','ft/min')+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)">'
-    +cell('PAPI BEAM CORRECTED',papiCorr.toFixed(2),'amber','°')+cell('PAPI VSI @ '+gs+'kts',papiVsi,'amber','ft/min')+'</div>';
+    +cell('PAPI (GEOMETRIC)',papiCorr.toFixed(2),'amber','°')+cell('PAPI V/S @ '+gs+'kts',papiVsi,'amber','ft/min')+'</div>'
+    +'<div style="padding:7px 12px;font-size:10px;color:var(--dim);line-height:1.4">Baro path vs PAPI: <b style="color:'+(Math.abs(dAng)<0.2?'var(--green)':'var(--amber)')+'">'+(dAng>=0?'+':'')+dAng.toFixed(2)+'°</b> '+(dAng>0.05?'(baro path above PAPI → expect more whites)':dAng<-0.05?'(baro path below PAPI → expect more reds)':'(on PAPI)')+'</div>';
 }
-['R_gp','R_papi','R_gs'].forEach(id=>{ const el=$(id); if(el){ el.onchange=compute; el.onblur=compute; } });
+['R_gp','R_papi','R_gs'].forEach(id=>{ const el=$(id); if(el){ el.onchange=function(){ if(id==='R_gs'){ state.gsManual=(el.value.trim()!==''); if(!state.gsManual) el.value=state.gs; } compute(); }; el.onblur=compute; } });
 window.__rnavReceive=function(d){
   if(!d)return;
   if(typeof d.temp==='number') state.temp=d.temp;
   if(typeof d.elev==='number') state.elev=d.elev;
-  if(typeof d.gs==='number'&&!isNaN(d.gs)){ state.gs=Math.round(d.gs); const el=$('R_gs'); if(el) el.value=state.gs; }
+  if(typeof d.gs==='number'&&!isNaN(d.gs)){ state.gs=Math.round(d.gs); const el=$('R_gs'); if(el&&!state.gsManual&&document.activeElement!==el) el.value=state.gs; }
   compute();
 };
 if($('R_gp')) $('R_gp').value=state.gp;
@@ -2800,7 +2854,7 @@ compute();
    ============================================================ */
 (function(){
   var KEY='perf777_v59';
-  var IDS=['cfg_pack', 'cfg_g4', 'cfg_alw', 'lim_mtow', 'lim_mlw', 'lim_mzfw', 'cfg_icao', 'cfg_rwy', 'cfg_oat', 'cfg_qnh', 'cfg_elev', 'cfg_hw', 'cfg_tw', 'cfg_spd', 'L_icao', 'L_rwy', 'L_alw', 'L_onarr', 'L_vrefx', 'L_taxi', 'L_bdeact', 'L_oat', 'L_qnh', 'L_elev', 'L_hw', 'L_tw', 'L_spd', 'DF_fob', 'DF_frsv', 'DF_hpn', 'DF_dn', 'DF_a1n', 'DF_a2n', 'DF_hpf', 'DF_app', 'DF_a1f', 'DF_a2f', 'DF_h2a1', 'DF_h2a2', 'DF_stf_gd', 'DF_stf_wind', 'DF_stf_lw', 'U_wt', 'U_alt', 'to_J17','to_K17','to_J18','to_J19','to_J21','to_J22','to_J23','to_J24','to_J25','to_J26','to_J28','to_K28'];
+  var IDS=['cfg_pack', 'cfg_g4', 'cfg_alw', 'lim_mtow', 'lim_mlw', 'lim_mzfw', 'cfg_icao', 'cfg_rwy', 'cfg_oat', 'cfg_qnh', 'cfg_elev', 'cfg_hw', 'cfg_tw', 'cfg_spd', 'L_icao', 'L_rwy', 'L_alw', 'L_onarr', 'L_vrefx', 'L_taxi', 'L_bdeact', 'L_oat', 'L_qnh', 'L_elev', 'L_hw', 'L_tw', 'L_spd', 'DF_fob', 'DF_frsv', 'DF_hpn', 'DF_dn', 'DF_a1n', 'DF_a2n', 'DF_hpf', 'DF_app', 'DF_a1f', 'DF_a2f', 'DF_h2a1', 'DF_h2a2', 'DF_stf_gd', 'DF_stf_wind', 'DF_stf_lw', 'U_wt', 'U_alt', 'I_gp', 'I_gpint', 'I_om', 'R_gp', 'R_papi', 'to_J17','to_K17','to_J18','to_J19','to_J21','to_J22','to_J23','to_J24','to_J25','to_J26','to_J28','to_K28'];
   window.__persistSave=function(){
     var st={};
     IDS.forEach(function(id){ var el=document.getElementById(id); if(!el) return; st[id]=el.tagName==='SELECT'?el.value:(el.value||''); });
