@@ -4,12 +4,15 @@
    - On fetch: serve cache instantly (works offline), update cache in background
    - On activate: delete old caches so updates propagate on next load
 */
-const CACHE = 'perf777-v81';
+const CACHE = 'perf777-v82';
 const PAGE  = '/Perf-777/';          /* GitHub Pages base path */
 const URLS  = [PAGE, PAGE + 'index.html'];
+/* v82: pdf.js for OFP PDF import — pre-cached so it works offline */
+const LIBS  = [PAGE + 'pdf.min.js', PAGE + 'pdf.worker.min.js'];
 self.addEventListener('install', function(e) {
   e.waitUntil(
     caches.open(CACHE).then(function(c) {
+      c.addAll(LIBS).catch(function() {});   /* best effort, never blocks install */
       /* Try both URLs; if one fails the other succeeds */
       return c.addAll(URLS).catch(function() {
         return c.add(PAGE).catch(function() {

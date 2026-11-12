@@ -443,6 +443,8 @@ select:focus{border-color:var(--amber)}
   <div style="display:flex;align-items:center;gap:12px">
     <div id="hdrTools">
       <button id="importOfp" style="background:var(--amber);color:var(--bg)">📷 OFP</button>
+      <button id="importOfpPdf" style="background:var(--amber);color:var(--bg)">📄 OFP PDF</button>
+      <button id="importOfpPaste" style="background:var(--amber);color:var(--bg)">📋 PASTE OFP</button>
       <button id="importMetar" style="background:var(--cyan);color:var(--bg)">🌦 METAR</button>
       <button id="L_importMetar" style="background:var(--cyan);color:var(--bg);display:none">🌦 METAR</button>
     </div>
@@ -454,7 +456,7 @@ select:focus{border-color:var(--amber)}
     </div>
     <span id="netDot" title="Network" style="width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block"></span>
     <span class="sub" id="ts">—</span>
-    <span class="sub" style="color:var(--green)">v81</span>
+    <span class="sub" style="color:var(--green)">v82</span>
   </div>
 </header>
 <div class="tabs">
@@ -475,6 +477,7 @@ select:focus{border-color:var(--amber)}
   <div class="card">
     <h2>Flight plan / Fuel</h2>
     <input type="file" id="ofpFile" accept="image/*" style="display:none">
+    <input type="file" id="ofpPdfFile" accept="application/pdf,.pdf" style="display:none">
     <div id="ofpStatus" style="display:none;padding:6px 12px;font-size:11px;color:var(--cyan);border-bottom:1px solid var(--line)"></div>
     <div class="inrow inhead">
       <span class="lab" style="color:var(--ink);font-size:10px;letter-spacing:.1em">ITEM</span>
@@ -538,7 +541,7 @@ select:focus{border-color:var(--amber)}
     <div id="ga200out"></div>
   </div>
 </div>
-<div class="foot">Perf 777 v81 &#183; 300ER/ERSF + 200LR + 777F &#183; uso offline iPad</div>
+<div class="foot">Perf 777 v82 &#183; 300ER/ERSF + 200LR + 777F &#183; uso offline iPad</div>
 </div>
 
 <!-- ===== LANDING MODULE ===== -->
@@ -580,7 +583,10 @@ select:focus{border-color:var(--amber)}
     <div class="card cardwide"><h2>Speed</h2><div class="grid" id="L_speeds" style="grid-template-columns:1fr"></div></div>
     <div class="obrow cardwide">
       <div class="card"><h2>Autobrake / Brake Temp</h2><div class="grid" id="L_autobrake" style="grid-template-columns:1fr"></div></div>
-      <div class="card"><h2>Brake temp &#8212; gear down inflight</h2><div class="grid" id="L_gearbtms" style="grid-template-columns:1fr"></div></div>
+      <div style="display:grid;gap:8px;align-content:start">
+        <div class="card"><h2>Brake temp &#8212; gear down inflight</h2><div class="grid" id="L_gearbtms" style="grid-template-columns:1fr"></div></div>
+        <div class="card"><h2>Visual illusions &amp; approach brief</h2><div id="VI_box"></div></div>
+      </div>
     </div>
     <!-- 200LR field limit panel -->
     <div id="landing200LRout" class="card cardwide" style="display:none"></div>
@@ -639,6 +645,12 @@ select:focus{border-color:var(--amber)}
   <div class="iotop">
     <div class="card">
       <h2>Fuel state</h2>
+      <div style="display:flex;gap:6px;padding:7px 10px;border-bottom:1px solid var(--line)">
+        <button type="button" onclick="window.__openOfpPaste&&window.__openOfpPaste()" style="flex:1;padding:9px;border:0;border-radius:6px;background:var(--amber);color:var(--bg);font-size:10px;font-weight:700;letter-spacing:.08em;touch-action:manipulation">📋 PASTE OFP</button>
+        <button type="button" onclick="window.__dfSavePreset&&window.__dfSavePreset()" style="flex:1;padding:9px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--green);font-size:10px;font-weight:700;letter-spacing:.08em;touch-action:manipulation">💾 SAVE PRESET</button>
+        <button type="button" onclick="window.__dfReset&&window.__dfReset()" style="flex:1;padding:9px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--cyan);font-size:10px;font-weight:700;letter-spacing:.08em;touch-action:manipulation">↺ RESET</button>
+      </div>
+      <div id="DF_ofpStatus" style="display:none;padding:5px 12px;font-size:10px;border-bottom:1px solid var(--line);line-height:1.35"></div>
       <div style="padding:5px 12px;font-size:9.5px;color:var(--dim);border-bottom:1px solid var(--line);line-height:1.35">All scenarios start from the holding point (HP). Fuel in tonnes.</div>
       <div class="inrow" style="background:rgba(57,194,215,0.06)"><span class="lab" style="color:var(--cyan);font-weight:700">FUEL ON BOARD now (t)</span><input type="text" inputmode="decimal" id="DF_fob" step="0.1" placeholder="e.g. 12.0"></div>
       <div class="inrow"><span class="lab">Final reserve (FRSV)</span><input type="text" inputmode="decimal" id="DF_frsv" step="0.1"></div>
@@ -1544,6 +1556,61 @@ window.__STF = (function(){
 
 
 
+/* ===== EK OFP PDF parser (v82) — pure function, text lines in, fields out ===== */
+function __ofpLinesFromTextContent(tc){
+  var items=tc.items.filter(function(it){return it.str&&it.str.trim()!=='';}).map(function(it){return {s:it.str,x:it.transform[4],y:it.transform[5]};});
+  items.sort(function(a,b){ return (b.y-a.y)||(a.x-b.x); });
+  var lines=[],cur=null;
+  items.forEach(function(it){
+    if(!cur||Math.abs(cur.y-it.y)>2){ cur={y:it.y,parts:[]}; lines.push(cur); }
+    cur.parts.push(it);
+  });
+  return lines.map(function(l){ l.parts.sort(function(a,b){return a.x-b.x;}); return l.parts.map(function(p){return p.s.trim();}).join(' ').replace(/\s+/g,' ').trim(); });
+}
+function __parseEkOfp(lines){
+  var r={alternates:[]}, i, L;
+  function num(s){ var n=parseInt(s,10); return isNaN(n)?null:n; }
+  for(i=0;i<lines.length;i++){
+    L=lines[i]; var m;
+    if(!r.flight&&(m=L.match(/^(EK\s?\d{1,4})\s+(\d{2}[A-Z]{3})\s+([A-Z]{4})\/[A-Z]{3}\s*-\s*([A-Z]{4})\/[A-Z]{3}\s+(777\S*)/))){
+      r.flight=m[1].replace(/\s/,''); r.date=m[2]; r.dep=m[3]; r.dest=m[4]; r.acRaw=m[5];
+      r.ac=/300ERSF/.test(m[5])?'300ERSF':/777F/.test(m[5])?'777F':/200LR/.test(m[5])?'200LR':/300ER/.test(m[5])?'300ER':null;
+      continue;
+    }
+    if(!r.flight) continue;
+    if(r.depRwy==null&&(m=L.match(new RegExp('\\b'+r.dep+'\\/(\\d{2}[LRC]?)\\b')))) r.depRwy=m[1];
+    if(r.destRwy==null&&(m=L.match(new RegExp('\\b'+r.dest+'\\/(\\d{2}[LRC]?)\\b')))) r.destRwy=m[1];
+    if(r.TRIP==null&&(m=L.match(/^TRIP\s+[A-Z]{4}\s+(\d+)\s+\d{4}\b/))) r.TRIP=num(m[1]);
+    else if(r.CONT==null&&(m=L.match(/^CONT\s+(?:\d{1,3}%?\s+)?(\d+)\s+\d{4}\b/))) r.CONT=num(m[1]);
+    else if(r.ALTN==null&&(m=L.match(/^ALTN\s+([A-Z]{4})\s+(\d+)\s+\d{4}\b/))){ r.ALTN=num(m[2]); r.altnIcao=m[1]; }
+    else if(r.FRSV==null&&(m=L.match(/^FRSV\s+(\d+)\s+\d{4}\b/))) r.FRSV=num(m[1]);
+    else if(r.ADDITIONAL==null&&(m=L.match(/^ADDNL\b[A-Z\s]*?\s(\d+)\s+\d{4}\b/))) r.ADDITIONAL=num(m[1]);
+    else if(r.EXTRA==null&&(m=L.match(/^EXTRA\b[A-Z\s]*?\s(\d+)\s+\d{4}\b/))) r.EXTRA=num(m[1]);
+    else if(r.TOF==null&&(m=L.match(/^T\/O FUEL\s+(\d+)/))) r.TOF=num(m[1]);
+    else if(r.TAXI==null&&(m=L.match(/^TAXI\s+(\d+)\s+\d{4}\b/))) r.TAXI=num(m[1]);
+    if((m=L.match(/\bEZFW\s+(\d{5,6})/))&&r.EZFW==null) r.EZFW=num(m[1]);
+    if((m=L.match(/\bMZFW\s+(\d{5,6})/))&&r.MZFW==null) r.MZFW=num(m[1]);
+    if((m=L.match(/\bETOW\s+(\d{5,6})/))&&r.ETOW==null) r.ETOW=num(m[1]);
+    if((m=L.match(/\bMTOW\s+(\d{5,6})/))&&r.MTOW==null) r.MTOW=num(m[1]);
+    if((m=L.match(/\bELWT\s+(\d{5,6})/))&&r.ELW==null) r.ELW=num(m[1]);
+    if((m=L.match(/\bMLWT\s+(\d{5,6})/))&&r.MLW==null) r.MLW=num(m[1]);
+    if(/^DEST ALTN DIST/.test(L)){
+      for(var j=i+1;j<lines.length&&j<i+40;j++){
+        var a=lines[j].match(/^([A-Z]{4})\/(\d{2}[LRC]?)\s+(\d{4})\s+\d{3}\s+\d{3}\s+[PM]\d{3}\s+(\d{4})\s+(\d+)\b/);
+        if(a) r.alternates.push({icao:a[1],rwy:a[2],dist:num(a[3]),time:a[4],fuel:num(a[5])});
+        else if(/^DISPATCH|^ETOPS|^POSN|^AWY/.test(lines[j])) break;
+      }
+      break; // everything needed is above/inside this table
+    }
+  }
+  if(r.ADDITIONAL==null&&r.TRIP!=null) r.ADDITIONAL=0;
+  if(r.EXTRA==null&&r.TRIP!=null) r.EXTRA=0;
+  var parts=['TRIP','CONT','ALTN','FRSV','ADDITIONAL','EXTRA'];
+  r.sumOk=(r.TOF!=null&&parts.every(function(k){return r[k]!=null;}))?(Math.abs(parts.reduce(function(s,k){return s+r[k];},0)-r.TOF)<=2):false;
+  r.missing=['TRIP','CONT','ALTN','FRSV','TAXI','EZFW','ELW','MTOW','MLW','MZFW','dep','dest'].filter(function(k){return r[k]==null;});
+  return r;
+}
+
 /* ============================================================
    TAKE OFF MODULE
    ============================================================ */
@@ -1901,6 +1968,116 @@ function setupOfpImport(){
   };
 }
 
+
+/* ===== v82: OFP import from PDF or pasted text — parsed on the iPad (free, offline).
+   Only if a field is missing or the fuel sum does not match, the OFP block text
+   (≈100 lines, never the PDF) goes to the cheapest model as a fallback. ===== */
+function ofpSay(c,t){ const st=document.getElementById('ofpStatus'); if(!st)return; st.style.display='block'; st.style.color=c; st.textContent=t;
+  const st2=document.getElementById('DF_ofpStatus'); if(st2){ st2.style.display='block'; st2.style.color=c; st2.textContent=t; } }
+async function importOfpLines(lines,srcLabel){
+  let r=__parseEkOfp(lines);
+  let viaAI=false;
+  if(r.missing.length||!r.sumOk){
+    const key=(function(){ try{ return localStorage.getItem('perf777_api_key')||''; }catch(e){ return ''; } })();
+    if(key){
+      ofpSay('var(--cyan)','Some fields not found — asking AI on the OFP block only…');
+      const s0=Math.max(0,lines.findIndex(l=>/^EK\s?\d/.test(l)));
+      const block=lines.slice(s0,s0+130).join('\n');
+      const prompt='Emirates OFP text below. Return ONLY JSON, integers in kg, no markdown: {"TRIP":,"CONT":,"ALTN":,"FRSV":,"ADDITIONAL":,"EXTRA":,"TAXI":,"TOF":,"EZFW":,"ELW":,"MTOW":,"MLW":,"MZFW":,"dep":"ICAO","dest":"ICAO","depRwy":"","destRwy":"","alternates":[{"icao":"","fuel":}]}\n\n'+block;
+      const data=await callClaude({model:'claude-haiku-5-5',max_tokens:600,messages:[{role:'user',content:prompt}]});
+      const txt=(data.content||[]).map(c=>c.text||'').join('');
+      const jm=txt.match(/\{[\s\S]*\}/);
+      if(jm){ const a=JSON.parse(jm[0]); Object.keys(a).forEach(k=>{ if(r[k]==null||(k==='alternates'&&!r.alternates.length)) r[k]=a[k]; }); viaAI=true; }
+    }
+  }
+  if(r.TRIP==null||r.EZFW==null) throw new Error('OFP fuel block not found');
+  // 1. aircraft type
+  if(r.ac&&typeof setAcType==='function') setAcType(r.ac);
+  // 2. Take Off fuel/weights (kg) — same cells as the photo import
+  const map={EZFW:'J17',TRIP:'J21',CONT:'J22',ALTN:'J23',FRSV:'J24',EXTRA:'J25',ADDITIONAL:'J26',TAXI:'J28'};
+  for(const k in map){ if(typeof r[k]==='number') setInput(map[k],r[k]); }
+  if(typeof r.EZFW==='number') setInput('K17',r.EZFW);
+  if(typeof r.TAXI==='number') setInput('K28',r.TAXI);
+  buildInputs(); compute();
+  if(r.MTOW>100000) LIMITS.MTOW=r.MTOW; if(r.MLW>100000) LIMITS.MLW=r.MLW; if(r.MZFW>100000) LIMITS.MZFW=r.MZFW;
+  syncLimitFields(); checkWeightLimits();
+  if(r.dep){ const el=document.getElementById('cfg_icao'); if(el) el.value=r.dep; }
+  if(r.depRwy){ const el=document.getElementById('cfg_rwy'); if(el){ el.value=r.depRwy; if(typeof recomputeWind==='function') recomputeWind(); } }
+  // 3. Landing
+  if(window.__landingReceive) window.__landingReceive({dest_icao:r.dest||'',ldg_rwy:r.destRwy||'',alw:(r.ELW>50000?r.ELW:null)});
+  // 4. Div Fuel: FOB (= on-arrival, set by the Take Off bridge), FRSV, destination, ALTN 1/2 (fuel from destination)
+  const a1=r.alternates[0]||null, a2=r.alternates[1]||null;
+  function df(id,v){ const el=document.getElementById(id); if(!el||v==null||v==='')return; el.value=v; if(typeof el.onchange==='function') el.onchange({target:el}); }
+  df('DF_dn',r.dest); df('DF_frsv',r.FRSV!=null?(r.FRSV/1000).toFixed(1):null);
+  df('DF_a1n',a1?a1.icao:''); df('DF_a1f',a1?(a1.fuel/1000).toFixed(1):'');
+  df('DF_a2n',a2?a2.icao:''); df('DF_a2f',a2?(a2.fuel/1000).toFixed(1):'');
+  let onArr=null; try{ const k30=engine.get('K30'); if(typeof k30==='number'&&!isNaN(k30)) onArr=Math.round(k30/100)/10; }catch(e){}
+  if(onArr!==null) df('DF_fob',onArr.toFixed(1));
+  if(window.__persistSave) window.__persistSave();
+  const ok=r.sumOk?'✓ fuel check OK (sum = T/O FUEL '+r.TOF+')':'⚠ fuel sum does not match T/O FUEL — check values';
+  ofpSay(r.sumOk?'var(--green)':'var(--amber)',
+    '✓ '+srcLabel+' '+(r.flight||'OFP')+' '+(r.dep||'')+'→'+(r.dest||'')+' '+(r.acRaw||'')+' · ALTN '+(a1?a1.icao:'—')+(a2?' / '+a2.icao:'')+' · '+ok+(viaAI?' · (some fields via AI)':'')+'. Review before use.');
+}
+function setupOfpPdfImport(){
+  const btn=document.getElementById('importOfpPdf'),file=document.getElementById('ofpPdfFile');
+  if(!btn||!file)return;
+  btn.onclick=()=>file.click();
+  file.onchange=async()=>{
+    const f=file.files[0]; if(!f)return;
+    ofpSay('var(--cyan)','Reading OFP PDF…');
+    try{
+      const pdfjs=await import('./pdf.min.js');
+      pdfjs.GlobalWorkerOptions.workerSrc='./pdf.worker.min.js';
+      const doc=await pdfjs.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;
+      let lines=[], found=-1;
+      for(let p=1;p<=Math.min(10,doc.numPages);p++){
+        const pg=await doc.getPage(p);
+        lines=lines.concat(__ofpLinesFromTextContent(await pg.getTextContent()));
+        if(found<0) found=lines.some(l=>/^DEST ALTN DIST/.test(l))?p:-1;
+        if(found>0&&p>found) break;           // one extra page in case the table spills over
+      }
+      await importOfpLines(lines,'PDF');
+    }catch(err){ ofpSay('var(--amber)','⚠ OFP PDF import failed: '+(err&&err.message?err.message:'unknown')+'. Try 📋 PASTE or enter manually.'); }
+    file.value='';
+  };
+}
+/* Paste: OFP text copied from the company app/PDF viewer. Lines are rebuilt
+   around the OFP labels, so it works even if the copy lost the line breaks. */
+function ofpTextToLines(txt){
+  let t=String(txt||'').replace(/\r/g,'\n');
+  const cuts=[/\s(?=EK\s?\d{1,4}\s+\d{2}[A-Z]{3}\s+[A-Z]{4}\/)/g,/\s(?=TRIP [A-Z]{4} \d)/g,/\s(?=CONT\s+\d)/g,/\s(?=ALTN [A-Z]{4}\s+\d)/g,
+    /\s(?=FRSV\s+\d)/g,/\s(?=FMC-RSV)/g,/\s(?=ADDNL\s)/g,/\s(?=EXTRA\s)/g,/\s(?=T\/O FUEL\s)/g,/\s(?=TAXI\s+\d)/g,/\s(?=RAMP FUEL)/g,
+    /\s(?=EZFW\s)/g,/\s(?=ETOW\s)/g,/\s(?=ELWT\s)/g,/\s(?=DEST ALTN DIST)/g,/\s(?=DISPATCH BRIEFING)/g,
+    /\s(?=[A-Z]{4}\/\d{2}[LRC]?\s+\d{4}\s+\d{3}\s+\d{3}\s+[PM]\d{3}\s)/g];
+  t=t.split('\n').map(l=>{ cuts.forEach(re=>{ l=l.replace(re,'\n'); }); return l; }).join('\n');
+  return t.split('\n').map(l=>l.replace(/\s+/g,' ').trim()).filter(l=>l);
+}
+function openPasteBox(){
+  let ov=document.getElementById('ofpPasteOverlay');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='ofpPasteOverlay'; ov.className='ovl';
+    ov.innerHTML='<div class="modal"><div class="mh"><span>Paste OFP text</span><button id="ofpPasteX">✕</button></div>'
+      +'<div style="padding:12px 16px;font-size:11px;color:var(--dim);line-height:1.4">Copy the OFP first page(s) — from the flight number down to the DEST ALTN table — then paste here.</div>'
+      +'<textarea id="ofpPasteTxt" style="margin:0 16px;height:220px;background:#091019;color:var(--ink);border:1px solid var(--line);border-radius:7px;font:11px ui-monospace,Menlo,monospace;padding:8px"></textarea>'
+      +'<div style="display:flex;gap:8px;padding:12px 16px"><button id="ofpPasteGo" style="flex:1;padding:12px;border:0;border-radius:7px;background:var(--amber);color:var(--bg);font-weight:700;letter-spacing:.1em">IMPORT</button></div></div>';
+    document.body.appendChild(ov);
+    document.getElementById('ofpPasteX').onclick=()=>{ ov.style.display='none'; };
+    document.getElementById('ofpPasteGo').onclick=async()=>{
+      const txt=document.getElementById('ofpPasteTxt').value; ov.style.display='none';
+      try{ await importOfpLines(ofpTextToLines(txt),'PASTE'); }
+      catch(err){ ofpSay('var(--amber)','⚠ Paste import failed: '+(err&&err.message?err.message:'unknown')+'. Copy from the flight number line down to the DEST ALTN table.'); }
+    };
+  }
+  document.getElementById('ofpPasteTxt').value='';
+  ov.style.display='flex';
+  // try the clipboard directly (iPad shows a small "Paste" bubble); textarea stays as fallback
+  if(navigator.clipboard&&navigator.clipboard.readText){
+    navigator.clipboard.readText().then(t=>{ if(t&&t.trim()) document.getElementById('ofpPasteTxt').value=t; }).catch(()=>{});
+  }
+}
+window.__openOfpPaste=openPasteBox;
+function setupOfpPaste(){ const b=document.getElementById('importOfpPaste'); if(b) b.onclick=openPasteBox; }
+
 window.__takeoffSetAcType=function(type){ compute(); };
 
 /* VREF X brake energy via the (already verified) takeoff brake chain.
@@ -1939,7 +2116,7 @@ window.__takeoffBrakeVrefX=function(gndSpd, abSel, opt){
 
 buildInputs(); syncLimitFields(); bindLimitFields();
 try{ var _r=localStorage.getItem('perf777_v59'); if(_r){ var _s=JSON.parse(_r); if(_s.__ec) Object.keys(_s.__ec).forEach(function(r){ var v=_s.__ec[r]; if(typeof v==='number') setInput(r,String(v)); else if(v&&v.__str) setInput(r,v.__str,true); }); var _mt=parseFloat(_s['lim_mtow']); if(!isNaN(_mt)&&_mt>100){ LIMITS.MTOW=_mt*1000; window.__LIMITS=LIMITS; } var _ml=parseFloat(_s['lim_mlw']); if(!isNaN(_ml)&&_ml>100){ LIMITS.MLW=_ml*1000; window.__LIMITS=LIMITS; } var _mz=parseFloat(_s['lim_mzfw']); if(!isNaN(_mz)&&_mz>100){ LIMITS.MZFW=_mz*1000; window.__LIMITS=LIMITS; } syncLimitFields(); } }catch(e){}
-compute(); stamp(); setupOfpImport(); setupMetarImport(); setInterval(stamp,30000);
+compute(); stamp(); setupOfpImport(); setupOfpPdfImport(); setupOfpPaste(); setupMetarImport(); setInterval(stamp,30000);
 if(typeof showInfo==='function') window.showInfoGlobal=showInfo;
 })();
 
@@ -2261,6 +2438,7 @@ function compute(){
   /* 200LR specific panels */
   render200LR_ldgLimits();
   render200LR_gdRoc();
+  if(window.__viRender) window.__viRender();   /* v82 */
 
   /* v81: always push airport data to ILS / RNAV so they never go stale
      (before: only when OAT/elev/wind changed; ALW change was not propagated) */
@@ -2354,6 +2532,12 @@ window.__landingSetAcType=function(type){ window.__currentAcType=type; compute()
 
 buildInputs(); compute(); setupMetar();
 window.__landingCompute=compute;
+/* v82: approach ground speed for the illusions brief (VREF X GS; 200LR/777F: VREF30 GS) */
+window.__landingAppGS=function(){
+  const is200=(window.__currentAcType==='200LR'||window.__currentAcType==='777F');
+  if(is200){ const vr=get200LR_vref_landing(); return vr.gs30; }
+  try{ const v=lengine.get('D6'); return (typeof v==='number'&&!isNaN(v))?v:null; }catch(e){ return null; }
+};
 })();
 
 
@@ -2465,6 +2649,110 @@ if($('R_gp')) $('R_gp').value=state.gp;
 if($('R_papi')) $('R_papi').value=state.papi;
 if($('R_gs')) $('R_gs').value=state.gs;
 compute();
+})();
+
+
+/* ============================================================
+   VISUAL ILLUSIONS & APPROACH BRIEF (v82) — Landing page
+   Select what applies today -> what you will see, where to look,
+   mitigation, and a numbers brief (rate for today's GS, PAPI picture).
+   Sources: FAA AIM 8-1-5 / 2-1-2, FSF ALAR BN 5.3, ICAO Annex 14,
+   Transport Canada AC 302-009 (wording is ours, not quoted).
+   ============================================================ */
+(function(){
+function $(id){ return document.getElementById(id); }
+const G=[
+ {key:'low',title:'Picture looks HIGH → risk LOW & SHORT',col:'var(--red)',items:[
+  {id:'narrow',n:'Narrow or long runway',see:'Looks high: tendency to push over and land short.',look:'GP / PAPI; height vs distance (≈318 ft/NM on 3°).'},
+  {id:'upslope',n:'Upslope runway / rising terrain',see:'Looks high on final. In the flare the runway comes up: earlier, firmer contact.',look:'GP / PAPI. Normal flare, do not add pitch chasing a soft landing.'},
+  {id:'blackhole',n:'Black hole: dark terrain or water before runway (night)',see:'Looks high and the path sags well below the GP, typically from ~4–5 NM to ~1 NM.',look:'GP / PAPI; height vs distance. RA reads high over terrain lower than the runway: use it only over the runway.'},
+  {id:'rain',n:'Rain on the windshield',see:'Looks high.',look:'GP / PAPI.'},
+  {id:'haze',n:'Haze',see:'Runway looks farther away: early / low descent.',look:'GP / PAPI; distance.'},
+  {id:'dim',n:'Dim / low-intensity runway lights',see:'Runway looks farther away.',look:'GP / PAPI; height vs distance.'},
+  {id:'fog',n:'Entering fog / low visibility',see:'Sensation of pitch-up, natural reaction is to push over.',look:'Attitude and vertical speed.'}]},
+ {key:'high',title:'Picture looks LOW → risk HIGH, LONG, FLOAT',col:'var(--amber)',items:[
+  {id:'wide',n:'Wide or short runway',see:'Looks low / close: high approach, high flare, hard landing.',look:'GP / PAPI; in the flare wait for the radio altimeter.'},
+  {id:'downslope',n:'Downslope runway / falling terrain',see:'Looks low: high approach and float; less tail clearance in a long nose-high float.',look:'GP / PAPI. Do not hold it off: normal flare, fly it on. Not in the TDZ → go-around.'},
+  {id:'bright',n:'Bright approach lights, dark surroundings',see:'Runway looks closer: tendency to stay high.',look:'GP / PAPI.'}]},
+ {key:'pos',title:'Attitude / position illusions',col:'var(--cyan)',items:[
+  {id:'lines',n:'Roads or other lines of lights',see:'Lining up on the wrong lights.',look:'LOC / final track on the ND.'},
+  {id:'horizon',n:'False horizon (sloping cloud, ground lights vs stars)',see:'Wrong attitude.',look:'Attitude indicator.'},
+  {id:'autok',n:'Single light in the dark (autokinesis)',see:'The light seems to move and you chase it.',look:'Instruments; keep the scan moving.'},
+  {id:'white',n:'Whiteout / flat light',see:'No height or slope cues.',look:'Instruments, radio altimeter.'},
+  {id:'soma',n:'Night / IMC go-around (somatogravic)',see:'Acceleration feels like pitch-up → urge to push.',look:'Fly G/A pitch on the ADI; PM calls attitude and V/S, not only "positive climb". Brief the G/A.'}]},
+ {key:'guid',title:'Non-standard guidance (changes the picture)',col:'var(--green)',items:[
+  {id:'steep',n:'Glide path steeper than 3°',see:'Steep picture all the way: tendency to shallow it. Rate of descent higher (3.5° ≈ +17%).',look:'Brief the expected V/S (above). Configure and stabilise earlier; flare needs a bit more.'},
+  {id:'papi',n:'PAPI angle different from glide path',see:'On the GP the PAPI will NOT show 2 white / 2 red (see PAPI picture above).',look:'Fly the GP; PAPI is a cross-check. Brief the expected lights.'},
+  {id:'ewh',n:'PAPI sited for smaller aircraft (EWH note)',see:'PAPI follows the eyes, not the wheels. 777 eye-to-wheel height ≈ 33–35 ft: a PAPI built for narrow-bodies leaves very little wheel clearance even "on slope".',look:'Stay on / slightly above the PAPI, never below. Use GP if available.'},
+  {id:'tchlow',n:'Low TCH / GP meets runway nearer',see:'Lower over the threshold, less wheel margin.',look:'Wheel height ≈ TCH − ~22 ft (777-300ER antenna to wheels). Do not go below the GP.'},
+  {id:'tchhigh',n:'High TCH / GP meets runway farther',see:'Higher over the threshold, longer touchdown, less runway left.',look:'Stay on the profile to the flare; do not push over at 100 ft to land "normal".'},
+  {id:'gpunus',n:'GP unusable below a height / offset LOC',see:'Guidance ends before the runway.',look:'Plan the transition: PAPI (if coincident), V/S, height vs distance, RA over the runway.'},
+  {id:'vasi',n:'Two-bar VASI',see:'Not designed for a high cockpit; unreliable for corrections below ~300 ft.',look:'Use it only as a "low" warning, not to set the profile.'}]}
+];
+let st={sel:{},gp:3.0,papi:3.0,open:false};
+try{ const s=JSON.parse(localStorage.getItem('perf777_vi')||'null'); if(s) st=Object.assign(st,s); }catch(e){}
+function save(){ try{ localStorage.setItem('perf777_vi',JSON.stringify(st)); }catch(e){} }
+function papiPicture(gp,papi){
+  const d=gp-papi, w=[papi-0.5,papi-1/6,papi+1/6,papi+0.5].filter(a=>gp>a).length;
+  const txt=w===2?'2 WHITE · 2 RED':w===3?'3 WHITE · 1 RED':w===4?'4 WHITE':w===1?'1 WHITE · 3 RED':'4 RED';
+  return {w,txt,d};
+}
+function lights(w){ let h=''; for(let i=0;i<4;i++){ const W=i<w; h+='<span style="display:inline-block;width:18px;height:18px;border-radius:50%;margin:0 3px;background:'+(W?'#f4f6f8':'#e0302a')+';box-shadow:0 0 8px '+(W?'rgba(255,255,255,.5)':'rgba(224,48,42,.6)')+'"></span>'; } return h; }
+function render(){
+  const box=$('VI_box'); if(!box) return;
+  let gs=null; try{ gs=window.__landingAppGS?window.__landingAppGS():null; }catch(e){}
+  const gsUse=(typeof gs==='number'&&gs>60)?Math.round(gs):null;
+  const sel=[]; G.forEach(g=>g.items.forEach(it=>{ if(st.sel[it.id]) sel.push({g,it}); }));
+  const nLow=sel.filter(x=>x.g.key==='low').length, nHigh=sel.filter(x=>x.g.key==='high').length;
+  // selector (collapsible list of chips)
+  let chips='';
+  G.forEach(g=>{
+    chips+='<div style="font-size:8.5px;letter-spacing:.12em;color:'+g.col+';text-transform:uppercase;margin:8px 0 4px;font-weight:700">'+g.title+'</div><div style="display:flex;flex-wrap:wrap;gap:5px">';
+    g.items.forEach(it=>{ const on=!!st.sel[it.id];
+      chips+='<button type="button" data-vi="'+it.id+'" style="padding:7px 9px;border-radius:6px;font-size:10.5px;touch-action:manipulation;cursor:pointer;border:1px solid '+(on?g.col:'var(--line)')+';background:'+(on?'rgba(255,255,255,.08)':'transparent')+';color:'+(on?'var(--ink)':'var(--dim)')+'">'+(on?'✓ ':'')+it.n+'</button>'; });
+    chips+='</div>';
+  });
+  // headline
+  let head='';
+  if(nLow&&!nHigh) head='<div style="color:var(--red);font-weight:700">⚠ Picture will look HIGH — it is not. Risk: LOW & SHORT.</div>';
+  else if(nHigh&&!nLow) head='<div style="color:var(--amber);font-weight:700">⚠ Picture will look LOW — it is not. Risk: HIGH, LONG, FLOAT.</div>';
+  else if(nHigh&&nLow) head='<div style="color:var(--red);font-weight:700">⚠ Mixed cues. When in doubt the danger is LOW & SHORT.</div>';
+  // numbers brief
+  const gp=st.gp||3, papi=st.papi||3, rod=gsUse?Math.round(gsUse*101.27*Math.tan(gp*Math.PI/180)/10)*10:null;
+  const pp=papiPicture(gp,papi);
+  const numbers='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--line);margin-top:8px">'
+    +'<div class="cell"><div class="t">GP ° / PAPI °</div><div style="display:flex;gap:4px"><input type="text" inputmode="decimal" id="VI_gp" value="'+gp+'" style="padding:5px 6px;font-size:13px"><input type="text" inputmode="decimal" id="VI_papi" value="'+papi+'" style="padding:5px 6px;font-size:13px"></div></div>'
+    +'<div class="cell"><div class="t">EXPECTED V/S'+(gsUse?' @ GS '+gsUse:'')+'</div><div class="v green" style="font-size:22px">'+(rod?rod:'—')+'<span class="u">fpm</span></div><div style="font-size:9px;color:var(--dim)">'+(rod?'call outside '+(rod-200)+'–'+(rod+200):'enter Landing data')+'</div></div>'
+    +'<div class="cell" style="align-items:center"><div class="t">PAPI ON THE GP</div><div>'+lights(pp.w)+'</div><div style="font-size:11px;font-weight:700;color:'+(pp.w===2?'var(--green)':'var(--amber)')+'">'+pp.txt+'</div></div>'
+    +'</div>';
+  // per-item cards
+  let cards='';
+  sel.forEach(x=>{ cards+='<div style="border-left:3px solid '+x.g.col+';padding:6px 10px;margin-top:6px;background:rgba(255,255,255,.02)">'
+    +'<div style="font-size:11.5px;font-weight:700;color:var(--ink)">'+x.it.n+'</div>'
+    +'<div style="font-size:10.5px;color:var(--dim);margin-top:2px"><b style="color:var(--ink)">You see:</b> '+x.it.see+'</div>'
+    +'<div style="font-size:10.5px;color:var(--dim);margin-top:2px"><b style="color:'+x.g.col+'">Look at / do:</b> '+x.it.look+'</div></div>'; });
+  // brief sentence
+  const pics=[]; if(nLow) pics.push('the picture will look high'); if(nHigh) pics.push('the picture will look low');
+  const brief=sel.length||Math.abs(pp.d)>1/6?('“'+(sel.length?sel.map(x=>x.it.n.split(' (')[0].split(':')[0]).join(', ')+': '+(pics.length?pics.join(' and ')+' — trust the instruments. ':''):'')
+    +'GP '+gp+'°, PAPI '+papi+'°: on the GP expect '+pp.txt.toLowerCase()+'. '
+    +(rod?'Expect about '+rod+' ft/min; call me outside ±200. ':'')
+    +(pp.w===2?'Call any PAPI that is not two and two. ':'PAPI is a cross-check only. ')
+    +'Below 200 ft we fly the GP and the rate, not the lights.”'):'';
+  box.innerHTML=
+    '<details id="VI_det"'+(st.open?' open':'')+' style="border-bottom:1px solid var(--line)"><summary style="padding:9px 12px;font-size:10.5px;color:var(--cyan);cursor:pointer;letter-spacing:.06em">Select today’s illusions / guidance ('+sel.length+' selected)</summary><div style="padding:0 12px 10px">'+chips
+    +(sel.length?'<button type="button" id="VI_clear" style="margin-top:8px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--dim);font-size:10px">Clear all</button>':'')+'</div></details>'
+    +'<div style="padding:8px 12px;font-size:11.5px">'+head+numbers+cards
+    +(brief?'<div style="margin-top:8px;padding:8px 10px;border:1px solid rgba(56,212,224,.3);border-radius:6px;font-size:11px;color:var(--ink);line-height:1.45"><div style="font-size:8.5px;letter-spacing:.14em;color:var(--cyan);margin-bottom:3px">BRIEF</div>'+brief+'</div>':'')
+    +'<div style="margin-top:8px;font-size:9.5px;color:var(--dim);line-height:1.4">ILS: below ~200 ft no corrections from the PAPI — hold attitude and rate, RA over the runway. Visual with PAPI only: the PAPI is your GP to the threshold (if sited for your EWH). Picture and instruments disagree → instruments; cannot reconcile → go-around.</div></div>';
+  // wiring
+  box.querySelectorAll('[data-vi]').forEach(b=>{ b.onclick=()=>{ const id=b.getAttribute('data-vi'); st.sel[id]=!st.sel[id]; st.open=true; save(); render(); }; });
+  const det=$('VI_det'); if(det) det.ontoggle=()=>{ st.open=det.open; save(); };
+  const c=$('VI_clear'); if(c) c.onclick=()=>{ st.sel={}; save(); render(); };
+  [['VI_gp','gp'],['VI_papi','papi']].forEach(([id,k])=>{ const el=$(id); if(el) el.onchange=()=>{ const v=parseFloat(el.value); st[k]=(!isNaN(v)&&v>1&&v<8)?v:3.0; save(); render(); }; });
+}
+window.__viRender=render;
+window.__viReset=function(){ st={sel:{},gp:3.0,papi:3.0,open:false}; save(); render(); };
+render();
 })();
 
 /* ============================================================
@@ -2597,6 +2885,24 @@ function render200LR_holding(){
 }
 
 ['DF_fob','DF_frsv','DF_hpf','DF_app','DF_a1f','DF_a2f','DF_h2a1','DF_h2a2','DF_hpn','DF_dn','DF_a1n','DF_a2n'].forEach(id=>{ const el=$(id); if(el){ el.onchange=e=>{ compute(); render200LR_holding(); }; el.onblur=e=>{ compute(); render200LR_holding(); }; } });
+/* v82: PRESET for the whole Div Fuel page (e.g. the usual return to DXB).
+   SAVE PRESET stores every field as it is now; RESET puts them all back. */
+var DF_ALL_IDS=['DF_fob','DF_frsv','DF_hpn','DF_dn','DF_a1n','DF_a2n','DF_hpf','DF_app','DF_a1f','DF_a2f','DF_h2a1','DF_h2a2','DF_stf_gd','DF_stf_wind','DF_stf_lw'];
+function dfRefresh(){ compute(); render200LR_holding(); if(window.__renderShortTripFuel) window.__renderShortTripFuel(); if(window.__persistSave) window.__persistSave(); }
+window.__dfSavePreset=function(){
+  if(!confirm('Save ALL current Div Fuel values as the preset for RESET?')) return;
+  var b={__flap:window.__dfHoldFlap||'up'}; DF_ALL_IDS.forEach(function(id){ var el=$(id); b[id]=el?el.value:''; });
+  try{ localStorage.setItem('perf777_df_preset',JSON.stringify(b)); }catch(e){}
+  var st=$('DF_ofpStatus'); if(st){ st.style.display='block'; st.style.color='var(--green)'; st.textContent='✓ Preset saved — RESET will restore these values.'; }
+};
+window.__dfReset=function(){
+  var b=null; try{ b=JSON.parse(localStorage.getItem('perf777_df_preset')||'null'); }catch(e){}
+  if(!confirm(b?'Reset ALL Div Fuel fields to the saved preset?':'No preset saved yet — clear all Div Fuel fields?')) return;
+  DF_ALL_IDS.forEach(function(id){ var el=$(id); if(el) el.value=b?(b[id]||''):''; });
+  window.__dfHoldFlap=(b&&b.__flap)||'up';
+  dfRefresh();
+  var st=$('DF_ofpStatus'); if(st){ st.style.display='block'; st.style.color='var(--cyan)'; st.textContent=b?'↺ Preset restored.':'↺ All fields cleared.'; }
+};
 window.__divFuelSetAcType=function(){ compute(); render200LR_holding(); if(window.__renderShortTripFuel) window.__renderShortTripFuel(); };
 window.__openLiveHolding=function(){ if(window.openLiveHolding) window.openLiveHolding(); };
 window.__divFuelSetFob=function(t){
@@ -2918,8 +3224,8 @@ compute();
   window.__persistRestore=function(){
     window.__inRestore=true;
     var raw; try{ raw=localStorage.getItem(KEY); }catch(e){ window.__inRestore=false; return null; }
-    if(!raw) return null;
-    var st; try{ st=JSON.parse(raw); }catch(e){ return null; }
+    if(!raw){ window.__inRestore=false; return null; }   /* v82: flag was left on with no saved state */
+    var st; try{ st=JSON.parse(raw); }catch(e){ window.__inRestore=false; return null; }
     IDS.forEach(function(id){
       var el=document.getElementById(id); if(!el) return;
       if(st[id]!==undefined&&st[id]!==''){
@@ -2950,6 +3256,8 @@ document.addEventListener('DOMContentLoaded',function(){
       if(el) el.style.display='block';
       const bo=document.getElementById('importOfp'),bm=document.getElementById('importMetar'),blm=document.getElementById('L_importMetar');
       if(bo) bo.style.display=(mod==='takeoff')?'':'none';
+      const bpdf=document.getElementById('importOfpPdf'); if(bpdf) bpdf.style.display=(mod==='takeoff')?'':'none';
+      const bpst=document.getElementById('importOfpPaste'); if(bpst) bpst.style.display=(mod==='takeoff')?'':'none';
       if(bm) bm.style.display=(mod==='takeoff')?'':'none';
       if(blm) blm.style.display=(mod==='landing')?'':'none';
     });
