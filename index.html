@@ -464,7 +464,7 @@ select:focus{border-color:var(--amber)}
     </div>
     <span id="netDot" title="Network" style="width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block"></span>
     <span class="sub" id="ts">—</span>
-    <span class="sub" style="color:var(--green)">v89</span>
+    <span class="sub" style="color:var(--green)">v90</span>
   </div>
 </header>
 <div class="tabs">
@@ -549,7 +549,7 @@ select:focus{border-color:var(--amber)}
     <div id="ga200out"></div>
   </div>
 </div>
-<div class="foot">Perf 777 v89 &#183; 300ER/ERSF + 200LR + 777F &#183; offline iPad</div>
+<div class="foot">Perf 777 v90 &#183; 300ER/ERSF + 200LR + 777F &#183; offline iPad</div>
 </div>
 
 <!-- ===== LANDING MODULE ===== -->
@@ -2748,16 +2748,15 @@ function compute(){
   /* v89: explanations; colours = RNAV baro path green, PAPI (geometric) cyan, ISA white — amber only for warnings */
   const I_ISA='Airport temperature minus ISA temperature at the airport elevation (ISA = 15 °C − 2 °C per 1000 ft). Positive = hotter than standard.';
   const I_CF='How much higher you really are than the altimeter says, on a hot day: about 4 % per 10 °C of ISA deviation (1 + 0.004 × ISA dev). Example: ISA +16 → 1.064 → at 1000 ft indicated above the runway you are really ≈1064 ft. The baro-VNAV path is built on indicated altitudes, so it is stretched by this factor.';
-  const I_RP='The angle you really fly on the baro-VNAV path today. The published angle (e.g. 3.0°) is multiplied by the correction factor: hot = steeper. Example: 3.0° at ISA +16 → ≈3.20°. In cold weather the effect reverses (shallower) — not computed here.';
+  const I_RP='The angle you really fly on the baro-VNAV path today. The published angle (e.g. 3.0°) is multiplied by the correction factor: hot = steeper (about +4 % per 10 °C above ISA). Example: 3.0° at ISA +16 → ≈3.20°. In cold weather the effect reverses (shallower) — not computed here.';
   const I_RV='Vertical speed needed to stay on the baro-VNAV path at the ground speed shown (GS × 101.3 × tan angle). Use it in the brief: this is a normal rate today, not a deviation.';
   const I_PA='The PAPI angle from the chart. PAPI lights are a geometric beam: temperature does not change them. That is why, on a hot day, the steeper baro path sits above the PAPI (more whites).';
   const I_PV='Vertical speed that would keep you exactly on the PAPI at the same ground speed. The difference with the RNAV V/S shows how much steeper the baro path is today (e.g. 780 vs 732 ft/min).';
-  out.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)">'
-    +cell('ISA DEVIATION',(isa>=0?'+':'')+isa.toFixed(0),'plain','°C',I_ISA)+cell('CORRECTION FACTOR',corrFactor.toFixed(3),'plain',null,I_CF)+'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)">'
-    +cell('RNAV PATH ACTUAL (BARO)',gpCorr.toFixed(2),'green','°',I_RP)+cell('RNAV V/S @ '+gs+'kts',vsi,'green','ft/min',I_RV)+'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)">'
-    +cell('PAPI (GEOMETRIC)',papiCorr.toFixed(2),'cyan','°',I_PA)+cell('PAPI V/S @ '+gs+'kts',papiVsi,'cyan','ft/min',I_PV)+'</div>'
+  /* v90: correction factor and PAPI geometric / PAPI V/S removed (kept in the maths) */
+  out.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--line)">'
+    +cell('ISA DEVIATION',(isa>=0?'+':'')+isa.toFixed(0),'plain','°C',I_ISA)
+    +cell('RNAV PATH ACTUAL (BARO)',gpCorr.toFixed(2),'green','°',I_RP)
+    +cell('RNAV V/S @ '+gs+'kts',vsi,'green','ft/min',I_RV)+'</div>'
     +papiBox();
   out.querySelectorAll('[data-rinfo]').forEach(function(bt){ bt.onclick=function(e){ e.stopPropagation(); if(window.showInfoGlobal) window.showInfoGlobal(decodeURIComponent(bt.getAttribute('data-rtitle')),decodeURIComponent(bt.getAttribute('data-rinfo'))); }; });
   /* v81: PAPI picture seen while flying the baro-VNAV path.
