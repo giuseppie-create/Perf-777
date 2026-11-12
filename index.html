@@ -156,6 +156,14 @@ select:focus{border-color:var(--amber)}
   .io .twocol{grid-template-columns:1fr}
   .io .twocol>div:first-child{border-right:0}
 }
+/* v85: collapsible cards (Take Off) */
+.card.coll>h2:first-child{cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.card.coll>h2:first-child .carr{color:var(--amber);font-size:11px;width:10px;flex-shrink:0;transition:transform .15s}
+.card.coll>h2:first-child .csum{margin-left:auto;font-size:10px;letter-spacing:.04em;text-transform:none;color:var(--ink);font-weight:500;font-family:"SF Mono",ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%}
+.card.coll:not(.closed)>h2:first-child .csum{display:none}
+.card.coll:not(.closed)>h2:first-child .carr{transform:rotate(90deg)}
+.card.coll.closed>:not(:first-child){display:none!important}
+.card.coll.closed>h2:first-child{border-bottom:0}
 </style>
 <style id="lh-styles">
 /* ── LIVE HOLDING OVERLAY ── */
@@ -456,7 +464,7 @@ select:focus{border-color:var(--amber)}
     </div>
     <span id="netDot" title="Network" style="width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block"></span>
     <span class="sub" id="ts">—</span>
-    <span class="sub" style="color:var(--green)">v84</span>
+    <span class="sub" style="color:var(--green)">v85</span>
   </div>
 </header>
 <div class="tabs">
@@ -541,7 +549,7 @@ select:focus{border-color:var(--amber)}
     <div id="ga200out"></div>
   </div>
 </div>
-<div class="foot">Perf 777 v84 &#183; 300ER/ERSF + 200LR + 777F &#183; offline iPad</div>
+<div class="foot">Perf 777 v85 &#183; 300ER/ERSF + 200LR + 777F &#183; offline iPad</div>
 </div>
 
 <!-- ===== LANDING MODULE ===== -->
@@ -646,7 +654,6 @@ select:focus{border-color:var(--amber)}
     <div class="card">
       <h2>Fuel state</h2>
       <div style="display:flex;gap:6px;padding:7px 10px;border-bottom:1px solid var(--line)">
-        <button type="button" onclick="window.__openOfpPaste&&window.__openOfpPaste()" style="flex:1;padding:9px;border:0;border-radius:6px;background:var(--amber);color:var(--bg);font-size:10px;font-weight:700;letter-spacing:.08em;touch-action:manipulation">📋 PASTE OFP</button>
         <button type="button" onclick="window.__dfSavePreset&&window.__dfSavePreset()" style="flex:1;padding:9px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--green);font-size:10px;font-weight:700;letter-spacing:.08em;touch-action:manipulation">💾 SAVE PRESET</button>
         <button type="button" onclick="window.__dfReset&&window.__dfReset()" style="flex:1;padding:9px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--cyan);font-size:10px;font-weight:700;letter-spacing:.08em;touch-action:manipulation">↺ RESET</button>
       </div>
@@ -1880,7 +1887,45 @@ function compute(){
   let oa; try{ oa=engine.get('K30'); }catch(e){ oa=NaN; }
   if(typeof oa==='number'&&!isNaN(oa)&&window.__landingSetOnArrival) window.__landingSetOnArrival(oa/1000);
   checkWeightLimits();
+  if(window.__toSummaries) setTimeout(window.__toSummaries,0);   /* after import/limits code finishes */
 }
+
+/* v85: Take Off cards open/close with a tap on the title; state remembered.
+   Closed cards show a one-line summary of their key values. */
+(function(){
+  const DEF_CLOSED={fuel:1,config:1,wx:1,weights:0,vref:0,autobrake:1,speeds:1,climb:1,ga:1};
+  const KEYS=[['Flight plan','fuel'],['Configuration','config'],['Airport','wx'],['Weights','weights'],['VREF','vref'],['Autobrake','autobrake'],['Speeds','speeds'],['Climb','climb'],['200LR','ga']];
+  let st={}; try{ st=JSON.parse(localStorage.getItem('perf777_to_cards')||'{}'); }catch(e){}
+  const cards={};
+  document.querySelectorAll('#mod-takeoff .card').forEach(function(c){
+    const h=c.querySelector(':scope>h2'); if(!h) return;
+    const k=(KEYS.find(x=>h.textContent.trim().indexOf(x[0])===0)||[])[1]; if(!k) return;
+    cards[k]=c; c.classList.add('coll');
+    h.insertAdjacentHTML('afterbegin','<span class="carr">▶</span>'); h.insertAdjacentHTML('beforeend','<span class="csum"></span>');
+    const closed=(k in st)?st[k]:!!DEF_CLOSED[k]; if(closed) c.classList.add('closed');
+    h.addEventListener('click',function(e){ if(e.target.closest('button,select,input')) return; c.classList.toggle('closed'); st[k]=c.classList.contains('closed'); try{ localStorage.setItem('perf777_to_cards',JSON.stringify(st)); }catch(_){} });
+  });
+  function t(v){ return (typeof v==='number'&&!isNaN(v))?(v/1000).toFixed(1):'—'; }
+  function g(r){ try{ return engine.get(r); }catch(e){ return NaN; } }
+  function val(id){ const el=document.getElementById(id); return el?(el.value||''):''; }
+  function cellsSum(c,n){ return Array.from(c.querySelectorAll('.cell')).slice(0,n).map(function(x){
+      const tt=(x.querySelector('.t')||{}).textContent||''; const sel=x.querySelector('select'); const vv=(x.querySelector('.v')||{}).textContent||'';
+      return tt.replace(/i$/,'').trim()+' '+(sel?sel.value.trim()+' → ':'')+vv.trim(); }).join(' · '); }
+  window.__toSummaries=function(){
+    const S={
+      fuel:'EZFW '+t(g('J17'))+' · TRIP '+t(g('J21'))+' · EXTRA '+t(g('J25'))+' · T/O FUEL '+t(g('K27')),
+      config:val('cfg_pack')+' · MTOW '+val('lim_mtow')+' · MLW '+val('lim_mlw')+' · MZFW '+val('lim_mzfw'),
+      wx:[val('cfg_icao'),val('cfg_rwy')].filter(Boolean).join(' ')+' · '+(val('cfg_oat')||'—')+'°C · Q'+(val('cfg_qnh')||'—')+' · HW '+(val('cfg_hw')||0)+' / TW '+(val('cfg_tw')||0),
+      weights:'ATOW '+t(g('K32'))+' · ALW '+t(g('K33'))+' · T/O FUEL '+t(g('K27'))
+    };
+    Object.keys(cards).forEach(function(k){
+      const sp=cards[k].querySelector(':scope>h2 .csum'); if(!sp) return;
+      sp.textContent=S[k]||cellsSum(cards[k],k==='autobrake'?2:3);
+    });
+  };
+  document.getElementById('mod-takeoff').addEventListener('change',function(){ setTimeout(window.__toSummaries,0); });
+  window.__toSummaries();
+})();
 
 let LIMITS={MTOW:351534,MLW:251290,MZFW:237683};
 window.__LIMITS=LIMITS; /* shared cross-IIFE (landing weights strip) */
